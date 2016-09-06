@@ -1,0 +1,13 @@
+{
+  "absolute.path": "/json-to-attributes/processed/",
+  "path": "processed/",
+  "filename": "test.json",
+  "file.group": "admin",
+  "file.lastModifiedTime": "2016-09-06T14:59:42-0500",
+  "file.creationTime": "2016-09-06T14:59:42-0500",
+  "file.lastAccessTime": "2016-09-06T14:59:43-0500",
+  "file.owner": "jmeyer",
+  "file.permissions": "rw-r--r--",
+  "attribute-list": "absolute.path,path,filename,file.group,file.lastModifiedTime,file.creationTime,file.lastAccessTime,file.owner,file.permissions,attribute-list,uuid",
+  "uuid": "e7c68128-ab50-4565-aa3e-28f3f5529639"
+}

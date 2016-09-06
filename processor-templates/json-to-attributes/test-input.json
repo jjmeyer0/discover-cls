@@ -1,0 +1,57 @@
+{
+  "_id": "57cf1fcc583d8f04fdc04902",
+  "index": 0,
+  "guid": "d3b43833-0e3a-4389-8ad9-a78210e090b2",
+  "isActive": true,
+  "balance": "$1,763.37",
+  "picture": "http://placehold.it/32x32",
+  "age": 39,
+  "eyeColor": "brown",
+  "name": {
+    "first": "Donna",
+    "last": "Hardin"
+  },
+  "company": "KOZGENE",
+  "email": "donna.hardin@kozgene.tv",
+  "phone": "+1 (988) 533-3316",
+  "address": "145 Williamsburg Street, Finderne, Vermont, 8321",
+  "about": "Laborum ipsum qui mollit nisi. Veniam sint enim ex ea veniam ex cupidatat adipisicing aliqua ullamco. Nulla pariatur et adipisicing culpa proident Lorem ex cillum veniam id do sint. Exercitation consequat ullamco ea ut non et. Consectetur velit ut tempor incididunt sint officia ullamco incididunt dolor labore id. Eiusmod consequat non cupidatat ipsum fugiat sunt culpa excepteur fugiat proident aute labore mollit.",
+  "registered": "Friday, May 20, 2016 3:30 PM",
+  "latitude": "78.24851",
+  "longitude": "-122.223365",
+  "tags": [
+    "culpa",
+    "sunt",
+    "reprehenderit",
+    "fugiat",
+    "velit"
+  ],
+  "range": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "friends": [
+    {
+      "id": 0,
+      "name": "Singleton Lloyd"
+    },
+    {
+      "id": 1,
+      "name": "Neva Johnston"
+    },
+    {
+      "id": 2,
+      "name": "Skinner Hunt"
+    }
+  ],
+  "greeting": "Hello, Donna! You have 9 unread messages.",
+  "favoriteFruit": "strawberry"
+}
