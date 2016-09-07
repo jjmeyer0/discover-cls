@@ -16,19 +16,29 @@
  */
 package com.discover.cls.processors.cls;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.processor.ProcessSession;
+import org.apache.nifi.processor.io.InputStreamCallback;
 import org.apache.nifi.processor.io.OutputStreamCallback;
+import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
 
 
-public class JsonToAttributesTest {
+public class TestAttributesToNestedJSON {
     private static final String TEST_INPUT = "{\n" +
             "  \"_id\": \"57cf1fcc583d8f04fdc04902\",\n" +
             "  \"index\": 0,\n" +
@@ -47,28 +57,45 @@ public class JsonToAttributesTest {
             "  \"favoriteFruit\": \"strawberry\"\n" +
             "}";
 
+    private static final Map<String, String> ATTRIBUTES = new HashMap<String, String>() {{
+        put("_id", "57cf1fcc583d8f04fdc04902");
+        put("index", "0");
+        put("name", "{ \"first\": \"Donna\", \"last\": \"Hardin\" }");
+        put("tags", "[ \"culpa\", \"sunt\", \"reprehenderit\", \"fugiat\", \"velit\" ]");
+        put("greeting", "\"Hello, Donna! You have 9 unread messages.\"");
+        put("favoriteFruit", "\"strawberry\"");
+    }};
+
     private TestRunner testRunner;
 
     @Before
     public void init() {
-        testRunner = TestRunners.newTestRunner(JsonToAttributes.class);
+        testRunner = TestRunners.newTestRunner(AttributesToNestedJSON.class);
     }
 
+    @Ignore
     @Test
     public void testProcessor() throws Exception {
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+
+        testRunner.setProperty(AttributesToNestedJSON.INCLUDE_CORE_ATTRIBUTES, "true");
+        testRunner.setProperty(AttributesToNestedJSON.DESTINATION, "flowfile-content");
+
         FlowFile flowFile = session.create();
-        flowFile = session.write(flowFile, new OutputStreamCallback() {
-            @Override
-            public void process(OutputStream out) throws IOException {
-                out.write(TEST_INPUT.getBytes());
-            }
-        });
+        flowFile = session.putAllAttributes(flowFile, ATTRIBUTES);
 
         testRunner.enqueue(flowFile);
         testRunner.run();
 
         testRunner.assertAllFlowFilesTransferred(JsonToAttributeList.REL_SUCCESS);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JsonToAttributeList.REL_SUCCESS);
+
+        assertEquals(1, flowFiles.size());
+
+        for (MockFlowFile file : flowFiles) {
+            file.assertContentEquals(TEST_INPUT);
+        }
     }
 
 }

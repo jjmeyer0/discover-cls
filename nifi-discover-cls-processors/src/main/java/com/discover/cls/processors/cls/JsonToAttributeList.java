@@ -34,6 +34,7 @@ import org.apache.nifi.stream.io.StreamUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -66,7 +67,7 @@ public class JsonToAttributeList extends AbstractProcessor {
             .description("Failed converting JSON to attributes.")
             .build();
 
-    private static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Collections.singletonList(REL_SUCCESS)));
+    private static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE)));
     private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Collections.singletonList(ATTRIBUTE_LIST_SEPARATOR));
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();

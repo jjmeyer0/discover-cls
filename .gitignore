@@ -24,3 +24,4 @@ hs_err_pid*
 
 # Let's not commit any example data
 *.discover.json
+deploy.sh
