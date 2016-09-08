@@ -12,6 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-com.discover.cls.processors.cls.JsonToAttributes
-com.discover.cls.processors.cls.JsonToAttributeList
-com.discover.cls.processors.cls.AttributesToNestedJSON
+com.discover.cls.processors.cls.JSONToAttributes
+com.discover.cls.processors.cls.JSONKeysToAttributeList
+com.discover.cls.processors.cls.AttributesToTypedJSON

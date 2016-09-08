@@ -36,7 +36,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 
-public class TestJsonToAttributes {
+public class TestJSONToAttributes {
     private static final String TEST_INPUT = "{\n" +
             "  \"_id\": \"57cf1fcc583d8f04fdc04902\",\n" +
             "  \"index\": 0,\n" +
@@ -61,7 +61,7 @@ public class TestJsonToAttributes {
 
     @Before
     public void init() {
-        testRunner = TestRunners.newTestRunner(JsonToAttributes.class);
+        testRunner = TestRunners.newTestRunner(JSONToAttributes.class);
     }
 
     @Test
@@ -78,7 +78,7 @@ public class TestJsonToAttributes {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JsonToAttributeList.REL_SUCCESS);
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
     }
 
     @Test
@@ -95,7 +95,7 @@ public class TestJsonToAttributes {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JsonToAttributeList.REL_FAILURE);
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_FAILURE);
     }
 
     @Test
@@ -112,9 +112,9 @@ public class TestJsonToAttributes {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JsonToAttributeList.REL_SUCCESS);
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
 
-        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JsonToAttributeList.REL_SUCCESS);
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
 
         assertEquals(1, flowFiles.size());
 
@@ -128,15 +128,15 @@ public class TestJsonToAttributes {
 
     @Test
     public void makeSureGetRelationshipOnlyContainsProperRelationships() throws Exception {
-        Set<Relationship> relationships = new JsonToAttributes().getRelationships();
-        assertTrue(relationships.contains(JsonToAttributes.REL_FAILURE));
-        assertTrue(relationships.contains(JsonToAttributes.REL_SUCCESS));
+        Set<Relationship> relationships = new JSONToAttributes().getRelationships();
+        assertTrue(relationships.contains(JSONToAttributes.REL_FAILURE));
+        assertTrue(relationships.contains(JSONToAttributes.REL_SUCCESS));
         assertEquals(2, relationships.size());
     }
 
     @Test
     public void makeSurePropertyDescriptorsAreProperlySetup() throws Exception {
-        List<PropertyDescriptor> supportedPropertyDescriptors = new JsonToAttributes().getSupportedPropertyDescriptors();
+        List<PropertyDescriptor> supportedPropertyDescriptors = new JSONToAttributes().getSupportedPropertyDescriptors();
         assertEquals(0, supportedPropertyDescriptors.size());
     }
 }

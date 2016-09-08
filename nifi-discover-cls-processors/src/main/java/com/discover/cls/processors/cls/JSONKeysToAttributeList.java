@@ -18,36 +18,47 @@ package com.discover.cls.processors.cls;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.nifi.components.PropertyDescriptor;
-import org.apache.nifi.flowfile.FlowFile;
+import org.apache.nifi.annotation.behavior.WritesAttribute;
+import org.apache.nifi.annotation.behavior.WritesAttributes;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.SeeAlso;
 import org.apache.nifi.annotation.documentation.Tags;
+import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.processor.AbstractProcessor;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
+import org.apache.nifi.processor.util.StandardValidators;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-
 @Tags({"json", "attributes", "flowfile"})
-@CapabilityDescription("This processor will take a JSON string and convert each of the top level keys to attributes. Each attribute value " +
-        "will be a valid JSON. For example, if a JSON string, '{\"key1\":\"val1\",\"key2\":0}', is converted to attributes, the following " +
-        "attributes and their values would be created: key1 with value \"val1\" and key2 with value 0. Notice the quotes. This is done because " +
-        "each of the values generated from this processor must be valid JSON.")
-@SeeAlso({AttributesToTypedJSON.class, JSONToAttributes.class, JSONKeysToAttributeList.class})
-public class JSONToAttributes extends AbstractProcessor {
+@CapabilityDescription("This processor will parse a JSON document and extract all first level keys from the JSON object. It will put all these attributes to 'attribute-list'.")
+@WritesAttributes({
+        @WritesAttribute(attribute = "attribute-list", description = "This attribute will contain all first level keys separated by the define separator.")
+})
+@SeeAlso({AttributesToTypedJSON.class, JSONToAttributes.class})
+public class JSONKeysToAttributeList extends AbstractProcessor {
+    static final String ATTRIBUTE_LIST_ATTRIBUTE = "attribute-list";
+
+    static final PropertyDescriptor ATTRIBUTE_LIST_SEPARATOR = new PropertyDescriptor.Builder()
+            .name("Attribute List Separator")
+            .displayName("Attribute List Separator")
+            .description("The separator that will be used separate the keys of the parsed JSON.")
+            .required(true)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .defaultValue(",")
+            .build();
 
     static final Relationship REL_SUCCESS = new Relationship.Builder()
             .name("success")
@@ -59,9 +70,8 @@ public class JSONToAttributes extends AbstractProcessor {
             .description("Failed converting JSON to attributes.")
             .build();
 
-
     private static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE)));
-    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(new ArrayList<PropertyDescriptor>());
+    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Collections.singletonList(ATTRIBUTE_LIST_SEPARATOR));
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -83,50 +93,36 @@ public class JSONToAttributes extends AbstractProcessor {
         }
 
         final byte[] content = FlowFileUtils.extractMessage(flowFile, session);
+        final String separator = context.getProperty(ATTRIBUTE_LIST_SEPARATOR).getValue();
 
         try {
             final JsonNode jsonNode = OBJECT_MAPPER.readTree(content);
-            final Map<String, String> attributes = new HashMap<>();
-            final Iterator<Map.Entry<String, JsonNode>> fields = jsonNode.fields();
+            final String attributeList = createAttributeList(jsonNode, separator);
 
-            while (fields.hasNext()) {
-                Map.Entry<String, JsonNode> entry = fields.next();
-                switch (entry.getValue().getNodeType()) {
-                    case ARRAY:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
-                    case BINARY:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
-                    case BOOLEAN:
-                        attributes.put(entry.getKey(), Boolean.toString(entry.getValue().asBoolean()));
-                        break;
-                    case MISSING:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
-                    case NULL:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
-                    case NUMBER:
-                        attributes.put(entry.getKey(), Long.toString(entry.getValue().asLong()));
-                        break;
-                    case OBJECT:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
-                    case POJO:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
-                    case STRING:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
-                }
-            }
-
-            flowFile = session.putAllAttributes(flowFile, attributes);
+            flowFile = session.putAttribute(flowFile, ATTRIBUTE_LIST_ATTRIBUTE, attributeList);
             session.transfer(flowFile, REL_SUCCESS);
         } catch (IOException e) {
             getLogger().error("Failed parsing JSON.", new Object[]{e});
             session.transfer(flowFile, REL_FAILURE);
         }
+    }
+
+    private String createAttributeList(JsonNode jsonNode, String separator) {
+        final List<String> jsonKeys = new ArrayList<>();
+
+        Iterator<Map.Entry<String, JsonNode>> fields = jsonNode.fields();
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> current = fields.next();
+            jsonKeys.add(current.getKey());
+        }
+
+        boolean isFirst = true;
+        String attributeList = "";
+        for (String key : jsonKeys) {
+            attributeList += isFirst ? key : separator + key;
+            isFirst = false;
+        }
+
+        return attributeList;
     }
 }

@@ -35,18 +35,18 @@ import java.util.Set;
 import static org.junit.Assert.*;
 
 
-public class TestJsonToAttributeList {
+public class TestJSONKeysToAttributeList {
 
     private TestRunner testRunner;
 
     @Before
     public void init() {
-        testRunner = TestRunners.newTestRunner(JsonToAttributeList.class);
+        testRunner = TestRunners.newTestRunner(JSONKeysToAttributeList.class);
     }
 
     @Test(expected = AssertionError.class)
     public void attributeListMustBeDefined() {
-        testRunner.setProperty(JsonToAttributeList.ATTRIBUTE_LIST_SEPARATOR, "");
+        testRunner.setProperty(JSONKeysToAttributeList.ATTRIBUTE_LIST_SEPARATOR, "");
 
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
         FlowFile flowFile = session.create();
@@ -69,20 +69,20 @@ public class TestJsonToAttributeList {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JsonToAttributeList.REL_SUCCESS);
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
 
-        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JsonToAttributeList.REL_SUCCESS);
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
 
         assertEquals(1, flowFiles.size());
 
         for (FlowFile file : flowFiles) {
-            assertEquals("key1,key2", file.getAttribute(JsonToAttributeList.ATTRIBUTE_LIST_ATTRIBUTE));
+            assertEquals("key1,key2", file.getAttribute(JSONKeysToAttributeList.ATTRIBUTE_LIST_ATTRIBUTE));
         }
     }
 
     @Test
     public void processorShouldProperlyConvertComplexJsonToAttributes() throws Exception {
-        testRunner.setProperty(JsonToAttributeList.ATTRIBUTE_LIST_SEPARATOR, "|");
+        testRunner.setProperty(JSONKeysToAttributeList.ATTRIBUTE_LIST_SEPARATOR, "|");
 
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
         FlowFile flowFile = session.create();
@@ -96,35 +96,35 @@ public class TestJsonToAttributeList {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JsonToAttributeList.REL_SUCCESS);
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
 
-        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JsonToAttributeList.REL_SUCCESS);
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
 
         assertEquals(1, flowFiles.size());
 
         for (FlowFile file : flowFiles) {
-            assertEquals("key1|key2|key3", file.getAttribute(JsonToAttributeList.ATTRIBUTE_LIST_ATTRIBUTE));
+            assertEquals("key1|key2|key3", file.getAttribute(JSONKeysToAttributeList.ATTRIBUTE_LIST_ATTRIBUTE));
         }
     }
 
     @Test
     public void makeSureGetRelationshipOnlyContainsProperRelationships() throws Exception {
-        Set<Relationship> relationships = new JsonToAttributeList().getRelationships();
-        assertTrue(relationships.contains(JsonToAttributeList.REL_FAILURE));
-        assertTrue(relationships.contains(JsonToAttributeList.REL_SUCCESS));
+        Set<Relationship> relationships = new JSONKeysToAttributeList().getRelationships();
+        assertTrue(relationships.contains(JSONKeysToAttributeList.REL_FAILURE));
+        assertTrue(relationships.contains(JSONKeysToAttributeList.REL_SUCCESS));
         assertEquals(2, relationships.size());
     }
 
     @Test
     public void makeSurePropertyDescriptorsAreProperlySetup() throws Exception {
-        List<PropertyDescriptor> supportedPropertyDescriptors = new JsonToAttributeList().getSupportedPropertyDescriptors();
-        assertTrue(supportedPropertyDescriptors.contains(JsonToAttributeList.ATTRIBUTE_LIST_SEPARATOR));
+        List<PropertyDescriptor> supportedPropertyDescriptors = new JSONKeysToAttributeList().getSupportedPropertyDescriptors();
+        assertTrue(supportedPropertyDescriptors.contains(JSONKeysToAttributeList.ATTRIBUTE_LIST_SEPARATOR));
         assertEquals(1, supportedPropertyDescriptors.size());
     }
 
     @Test
     public void makeSureProcessorProperlyHandlesMalformedJson() throws Exception {
-        testRunner.setProperty(JsonToAttributeList.ATTRIBUTE_LIST_SEPARATOR, "|");
+        testRunner.setProperty(JSONKeysToAttributeList.ATTRIBUTE_LIST_SEPARATOR, "|");
 
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
         FlowFile flowFile = session.create();
@@ -138,6 +138,6 @@ public class TestJsonToAttributeList {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JsonToAttributeList.REL_FAILURE);
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_FAILURE);
     }
 }

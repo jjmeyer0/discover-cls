@@ -62,7 +62,7 @@ import java.util.Set;
         "will try and keep the attribute values' types. If parsing of an attribute fails, the value will automatically be stored " +
         "as a string. The core attributes will be stored as strings as well.")
 @WritesAttribute(attribute = "JSONAttributes", description = "JSON representation of Attributes")
-public class AttributesToNestedJSON extends AbstractProcessor {
+public class AttributesToTypedJSON extends AbstractProcessor {
 
     static final String JSON_ATTRIBUTE_NAME = "JSONAttributes";
     private static final String AT_LIST_SEPARATOR = ",";
