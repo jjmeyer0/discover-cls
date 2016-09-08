@@ -137,6 +137,64 @@ public class TestJSONToAttributes {
     @Test
     public void makeSurePropertyDescriptorsAreProperlySetup() throws Exception {
         List<PropertyDescriptor> supportedPropertyDescriptors = new JSONToAttributes().getSupportedPropertyDescriptors();
-        assertEquals(0, supportedPropertyDescriptors.size());
+        assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.OVERRIDE_ATTRIBUTES));
+        assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.PRESERVE_TYPE));
+        assertEquals(2, supportedPropertyDescriptors.size());
+    }
+
+    @Test
+    public void verifyJsonWithOverlappingAttributesDoesNotOverrideWhenOverrideAttributesPropertyIsFalse() throws Exception {
+        testRunner.setProperty(JSONToAttributes.OVERRIDE_ATTRIBUTES, "false");
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.write(flowFile, new OutputStreamCallback() {
+            @Override
+            public void process(OutputStream out) throws IOException {
+                out.write("{\"test\":\"somethingelse\"}".getBytes());
+            }
+        });
+
+        flowFile = session.putAttribute(flowFile, "test", "something");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+
+        assertEquals(1, flowFiles.size());
+
+        for (MockFlowFile file : flowFiles) {
+            assertEquals("something", file.getAttribute("test"));
+        }
+    }
+
+    @Test
+    public void verifyJsonProperlySavesAttributesWhenPreserveTypeIsFalse() throws Exception {
+        testRunner.setProperty(JSONToAttributes.PRESERVE_TYPE, "false");
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.write(flowFile, new OutputStreamCallback() {
+            @Override
+            public void process(OutputStream out) throws IOException {
+                out.write("{\"test\":\"somethingelse\"}".getBytes());
+            }
+        });
+
+        flowFile = session.putAttribute(flowFile, "test", "something");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+
+        assertEquals(1, flowFiles.size());
+
+        for (MockFlowFile file : flowFiles) {
+            assertEquals("somethingelse", file.getAttribute("test"));
+        }
     }
 }

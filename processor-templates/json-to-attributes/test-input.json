@@ -1,57 +1,34 @@
 {
-  "_id": "57cf1fcc583d8f04fdc04902",
-  "index": 0,
-  "guid": "d3b43833-0e3a-4389-8ad9-a78210e090b2",
-  "isActive": true,
-  "balance": "$1,763.37",
-  "picture": "http://placehold.it/32x32",
-  "age": 39,
-  "eyeColor": "brown",
-  "name": {
-    "first": "Donna",
-    "last": "Hardin"
-  },
-  "company": "KOZGENE",
-  "email": "donna.hardin@kozgene.tv",
-  "phone": "+1 (988) 533-3316",
-  "address": "145 Williamsburg Street, Finderne, Vermont, 8321",
-  "about": "Laborum ipsum qui mollit nisi. Veniam sint enim ex ea veniam ex cupidatat adipisicing aliqua ullamco. Nulla pariatur et adipisicing culpa proident Lorem ex cillum veniam id do sint. Exercitation consequat ullamco ea ut non et. Consectetur velit ut tempor incididunt sint officia ullamco incididunt dolor labore id. Eiusmod consequat non cupidatat ipsum fugiat sunt culpa excepteur fugiat proident aute labore mollit.",
-  "registered": "Friday, May 20, 2016 3:30 PM",
-  "latitude": "78.24851",
-  "longitude": "-122.223365",
-  "tags": [
-    "culpa",
-    "sunt",
-    "reprehenderit",
-    "fugiat",
-    "velit"
-  ],
-  "range": [
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9
-  ],
-  "friends": [
-    {
-      "id": 0,
-      "name": "Singleton Lloyd"
-    },
-    {
-      "id": 1,
-      "name": "Neva Johnston"
-    },
-    {
-      "id": 2,
-      "name": "Skinner Hunt"
-    }
-  ],
-  "greeting": "Hello, Donna! You have 9 unread messages.",
-  "favoriteFruit": "strawberry"
+  "@timestamp": "2016-03-24T15:04:18.759Z",
+  "@version": 1,
+  "application": "authentication-api",
+  "caller_class_name": "com.discover.common.web.filters.RequestIdentifierLoggingFilter",
+  "caller_file_name": "RequestIdentifierLoggingFilter.java",
+  "caller_line_number": 59,
+  "caller_method_name": "doFilter",
+  "filename": "11198954174696",
+  "host": "50.93.251.80",
+  "host.ip": "50.93.251.80",
+  "host.ip.geo.city": "Minneapolis",
+  "host.ip.geo.country": "United States",
+  "host.ip.geo.country.isocode": "US",
+  "host.ip.geo.latitude": "44.9645",
+  "host.ip.geo.longitude": "-93.2617",
+  "host.ip.geo.lookup.micros": "1406",
+  "host.ip.geo.postalcode": "55404",
+  "host.ip.geo.subdivision.0": "Minnesota",
+  "host.ip.geo.subdivision.isocode.0": "MN",
+  "hostname": "rwlqa151.ihsdev.discoverfinancial.com",
+  "level": "INFO",
+  "level_value": 20000,
+  "logger_name": "com.discover.common.web.filters.RequestIdentifierLoggingFilter",
+  "message": "Initiated GET /api/auth/ping HTTP/1.1 from with RequestIdentifier{clientId=ae65a2800fee6c231f7d7f118f65ba76281f38aeb09b6755ad9e86c5134f791b, inetAddress=199.38.154.9, sessionId=VTlFQ0w0RXpxdEJHRzdYVEVVVWlwbkVtQWtBPQ, characteristics={User-Agent=DiscoverMobile/331 CFNetwork/711.2.23 Darwin/14.0.0, Accept=*/*}}",
+  "pid": 0,
+  "port": 33111,
+  "request-id": "c24af8bc-de6f-3333-893c-2a499f3987e5",
+  "runtime": "Inet8TSYS/inet8-tsys-n1/iBankAuthenticationAPI1",
+  "thread_name": "WebContainer : 0",
+  "trace_id": "c24af8bc-de6f-3333-893c-2a499f3987e5",
+  "type": "application",
+  "uuid": "5763586a-d6b0-4eb7-83ff-dfcb6a38d5a1"
 }

@@ -28,6 +28,7 @@ import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
+import org.apache.nifi.processor.util.StandardValidators;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -45,9 +46,31 @@ import java.util.Set;
 @CapabilityDescription("This processor will take a JSON string and convert each of the top level keys to attributes. Each attribute value " +
         "will be a valid JSON. For example, if a JSON string, '{\"key1\":\"val1\",\"key2\":0}', is converted to attributes, the following " +
         "attributes and their values would be created: key1 with value \"val1\" and key2 with value 0. Notice the quotes. This is done because " +
-        "each of the values generated from this processor must be valid JSON.")
+        "each of the values generated from this processor must be valid JSON. However, this functionality is configurable. This is the default behavior. " +
+        "If this is not desired then switch the property 'Preserve JSON Type' to false. This will then output string values without the outer double quotes.")
 @SeeAlso({AttributesToTypedJSON.class, JSONToAttributes.class, JSONKeysToAttributeList.class})
 public class JSONToAttributes extends AbstractProcessor {
+    static final PropertyDescriptor OVERRIDE_ATTRIBUTES = new PropertyDescriptor.Builder()
+            .name("Override Attributes")
+            .displayName("Override Attributes")
+            .description("If true a JSON key with the same name as a flow file attribute will overwrite the value otherwise the value will be dropped.")
+            .required(true)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .addValidator(StandardValidators.BOOLEAN_VALIDATOR)
+            .defaultValue("true")
+            .allowableValues("true", "false")
+            .build();
+
+    static final PropertyDescriptor PRESERVE_TYPE = new PropertyDescriptor.Builder()
+            .name("Preserve JSON Type")
+            .displayName("Preserve JSON Type")
+            .description("Determines whether or not this processor should try and preserve the JSON value types when writing them to attribute values.")
+            .required(true)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .addValidator(StandardValidators.BOOLEAN_VALIDATOR)
+            .defaultValue("true")
+            .allowableValues("true", "false")
+            .build();
 
     static final Relationship REL_SUCCESS = new Relationship.Builder()
             .name("success")
@@ -61,7 +84,7 @@ public class JSONToAttributes extends AbstractProcessor {
 
 
     private static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE)));
-    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(new ArrayList<PropertyDescriptor>());
+    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(OVERRIDE_ATTRIBUTES, PRESERVE_TYPE));
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -83,6 +106,8 @@ public class JSONToAttributes extends AbstractProcessor {
         }
 
         final byte[] content = FlowFileUtils.extractMessage(flowFile, session);
+        final boolean toOverride = context.getProperty(OVERRIDE_ATTRIBUTES).asBoolean();
+        final boolean preserveType = context.getProperty(PRESERVE_TYPE).asBoolean();
 
         try {
             final JsonNode jsonNode = OBJECT_MAPPER.readTree(content);
@@ -91,34 +116,37 @@ public class JSONToAttributes extends AbstractProcessor {
 
             while (fields.hasNext()) {
                 Map.Entry<String, JsonNode> entry = fields.next();
-                switch (entry.getValue().getNodeType()) {
-                    case ARRAY:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
-                    case BINARY:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
-                    case BOOLEAN:
-                        attributes.put(entry.getKey(), Boolean.toString(entry.getValue().asBoolean()));
-                        break;
-                    case MISSING:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
-                    case NULL:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
-                    case NUMBER:
-                        attributes.put(entry.getKey(), Long.toString(entry.getValue().asLong()));
-                        break;
-                    case OBJECT:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
-                    case POJO:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
-                    case STRING:
-                        attributes.put(entry.getKey(), entry.getValue().toString());
-                        break;
+                if (toOverride || flowFile.getAttribute(entry.getKey()) == null) {
+                    JsonNode value = entry.getValue();
+                    switch (value.getNodeType()) {
+                        case ARRAY:
+                            attributes.put(entry.getKey(), value.toString());
+                            break;
+                        case BINARY:
+                            attributes.put(entry.getKey(), value.toString());
+                            break;
+                        case BOOLEAN:
+                            attributes.put(entry.getKey(), Boolean.toString(value.asBoolean()));
+                            break;
+                        case MISSING:
+                            attributes.put(entry.getKey(), value.toString());
+                            break;
+                        case NULL:
+                            attributes.put(entry.getKey(), value.toString());
+                            break;
+                        case NUMBER:
+                            attributes.put(entry.getKey(), Long.toString(value.asLong()));
+                            break;
+                        case OBJECT:
+                            attributes.put(entry.getKey(), value.toString());
+                            break;
+                        case POJO:
+                            attributes.put(entry.getKey(), value.toString());
+                            break;
+                        case STRING:
+                            attributes.put(entry.getKey(), preserveType ? value.toString() : value.textValue());
+                            break;
+                    }
                 }
             }
 
