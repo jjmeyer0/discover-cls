@@ -20,28 +20,33 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.flowfile.FlowFile;
-import org.apache.nifi.processor.*;
-import org.apache.nifi.annotation.behavior.ReadsAttribute;
-import org.apache.nifi.annotation.behavior.ReadsAttributes;
-import org.apache.nifi.annotation.behavior.WritesAttribute;
-import org.apache.nifi.annotation.behavior.WritesAttributes;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.SeeAlso;
 import org.apache.nifi.annotation.documentation.Tags;
+import org.apache.nifi.processor.AbstractProcessor;
+import org.apache.nifi.processor.ProcessContext;
+import org.apache.nifi.processor.ProcessSession;
+import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
-import org.apache.nifi.stream.io.StreamUtils;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
 @Tags({"json", "attributes", "flowfile"})
 @CapabilityDescription("This processor will take a JSON string and convert each of the top level keys to attributes. Each attribute value " +
         "will be a valid JSON. For example, if a JSON string, '{\"key1\":\"val1\",\"key2\":0}', is converted to attributes, the following " +
-        "attributes and their values would be created: key1 with value \"val1\" and key2 with value 0.")
-@SeeAlso({AttributesToNestedJSON.class})
-@ReadsAttributes({@ReadsAttribute(attribute = "", description = "")})
-@WritesAttributes({@WritesAttribute(attribute = "", description = "")})
+        "attributes and their values would be created: key1 with value \"val1\" and key2 with value 0. Notice the quotes. This is done because " +
+        "each of the values generated from this processor must be valid JSON.")
+@SeeAlso({AttributesToNestedJSON.class, JsonToAttributes.class, JsonToAttributeList.class})
 public class JsonToAttributes extends AbstractProcessor {
 
     static final Relationship REL_SUCCESS = new Relationship.Builder()
@@ -56,7 +61,7 @@ public class JsonToAttributes extends AbstractProcessor {
 
 
     private static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE)));
-    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList());
+    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(new ArrayList<PropertyDescriptor>());
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -77,12 +82,15 @@ public class JsonToAttributes extends AbstractProcessor {
             return;
         }
 
-        final byte[] content = extractMessage(flowFile, session);
+        final byte[] content = FlowFileUtils.extractMessage(flowFile, session);
 
         try {
             final JsonNode jsonNode = OBJECT_MAPPER.readTree(content);
             final Map<String, String> attributes = new HashMap<>();
-            jsonNode.fields().forEachRemaining(entry -> {
+            final Iterator<Map.Entry<String, JsonNode>> fields = jsonNode.fields();
+
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> entry = fields.next();
                 switch (entry.getValue().getNodeType()) {
                     case ARRAY:
                         attributes.put(entry.getKey(), entry.getValue().toString());
@@ -112,7 +120,7 @@ public class JsonToAttributes extends AbstractProcessor {
                         attributes.put(entry.getKey(), entry.getValue().toString());
                         break;
                 }
-            });
+            }
 
             flowFile = session.putAllAttributes(flowFile, attributes);
             session.transfer(flowFile, REL_SUCCESS);
@@ -120,14 +128,5 @@ public class JsonToAttributes extends AbstractProcessor {
             getLogger().error("Failed parsing JSON.", new Object[]{e});
             session.transfer(flowFile, REL_FAILURE);
         }
-    }
-
-    /**
-     * Extracts contents of the {@link FlowFile} as byte array.
-     */
-    private byte[] extractMessage(FlowFile flowFile, ProcessSession session) {
-        final byte[] messageContent = new byte[(int) flowFile.getSize()];
-        session.read(flowFile, in -> StreamUtils.fillBuffer(in, messageContent, true));
-        return messageContent;
     }
 }

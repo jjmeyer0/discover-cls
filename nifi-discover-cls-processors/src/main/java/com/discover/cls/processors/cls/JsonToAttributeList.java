@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.nifi.annotation.behavior.WritesAttribute;
 import org.apache.nifi.annotation.behavior.WritesAttributes;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
+import org.apache.nifi.annotation.documentation.SeeAlso;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.flowfile.FlowFile;
@@ -30,23 +31,25 @@ import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
-import org.apache.nifi.stream.io.StreamUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-@Tags({"json", "attributes"})
+@Tags({"json", "attributes", "flowfile"})
 @CapabilityDescription("This processor will parse a JSON document and extract all first level keys from the JSON object. It will put all these attributes to 'attribute-list'.")
 @WritesAttributes({
         @WritesAttribute(attribute = "attribute-list", description = "This attribute will contain all first level keys separated by the define separator.")
 })
+@SeeAlso({AttributesToNestedJSON.class, JsonToAttributes.class})
 public class JsonToAttributeList extends AbstractProcessor {
-    static final String ATTRIBUTE_LIST = "attribute-list";
+    static final String ATTRIBUTE_LIST_ATTRIBUTE = "attribute-list";
 
     static final PropertyDescriptor ATTRIBUTE_LIST_SEPARATOR = new PropertyDescriptor.Builder()
             .name("Attribute List Separator")
@@ -89,14 +92,14 @@ public class JsonToAttributeList extends AbstractProcessor {
             return;
         }
 
-        final byte[] content = extractMessage(flowFile, session);
+        final byte[] content = FlowFileUtils.extractMessage(flowFile, session);
         final String separator = context.getProperty(ATTRIBUTE_LIST_SEPARATOR).getValue();
 
         try {
             final JsonNode jsonNode = OBJECT_MAPPER.readTree(content);
             final String attributeList = createAttributeList(jsonNode, separator);
 
-            flowFile = session.putAttribute(flowFile, ATTRIBUTE_LIST, attributeList);
+            flowFile = session.putAttribute(flowFile, ATTRIBUTE_LIST_ATTRIBUTE, attributeList);
             session.transfer(flowFile, REL_SUCCESS);
         } catch (IOException e) {
             getLogger().error("Failed parsing JSON.", new Object[]{e});
@@ -106,7 +109,12 @@ public class JsonToAttributeList extends AbstractProcessor {
 
     private String createAttributeList(JsonNode jsonNode, String separator) {
         final List<String> jsonKeys = new ArrayList<>();
-        jsonNode.fields().forEachRemaining(entry -> jsonKeys.add(entry.getKey()));
+
+        Iterator<Map.Entry<String, JsonNode>> fields = jsonNode.fields();
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> current = fields.next();
+            jsonKeys.add(current.getKey());
+        }
 
         boolean isFirst = true;
         String attributeList = "";
@@ -116,14 +124,5 @@ public class JsonToAttributeList extends AbstractProcessor {
         }
 
         return attributeList;
-    }
-
-    /**
-     * Extracts contents of the {@link FlowFile} as byte array.
-     */
-    private byte[] extractMessage(FlowFile flowFile, ProcessSession session) {
-        final byte[] messageContent = new byte[(int) flowFile.getSize()];
-        session.read(flowFile, in -> StreamUtils.fillBuffer(in, messageContent, true));
-        return messageContent;
     }
 }

@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.discover.cls.processors.cls;
 
 
@@ -65,15 +64,15 @@ import java.util.Set;
 @WritesAttribute(attribute = "JSONAttributes", description = "JSON representation of Attributes")
 public class AttributesToNestedJSON extends AbstractProcessor {
 
-    public static final String JSON_ATTRIBUTE_NAME = "JSONAttributes";
+    static final String JSON_ATTRIBUTE_NAME = "JSONAttributes";
     private static final String AT_LIST_SEPARATOR = ",";
 
-    public static final String DESTINATION_ATTRIBUTE = "flowfile-attribute";
-    public static final String DESTINATION_CONTENT = "flowfile-content";
+    static final String DESTINATION_ATTRIBUTE = "flowfile-attribute";
+    static final String DESTINATION_CONTENT = "flowfile-content";
     private static final String APPLICATION_JSON = "application/json";
 
 
-    public static final PropertyDescriptor ATTRIBUTES_LIST = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor ATTRIBUTES_LIST = new PropertyDescriptor.Builder()
             .name("Attributes List")
             .description("Comma separated list of attributes to be included in the resulting JSON. If this value " +
                     "is left empty then all existing Attributes will be included. This list of attributes is " +
@@ -84,7 +83,7 @@ public class AttributesToNestedJSON extends AbstractProcessor {
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
 
-    public static final PropertyDescriptor DESTINATION = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor DESTINATION = new PropertyDescriptor.Builder()
             .name("Destination")
             .description("Control if JSON value is written as a new flowfile attribute '" + JSON_ATTRIBUTE_NAME + "' " +
                     "or written in the flowfile content. Writing to flowfile content will overwrite any " +
@@ -94,7 +93,7 @@ public class AttributesToNestedJSON extends AbstractProcessor {
             .defaultValue(DESTINATION_ATTRIBUTE)
             .build();
 
-    public static final PropertyDescriptor INCLUDE_CORE_ATTRIBUTES = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor INCLUDE_CORE_ATTRIBUTES = new PropertyDescriptor.Builder()
             .name("Include Core Attributes")
             .description("Determines if the FlowFile org.apache.nifi.flowfile.attributes.CoreAttributes which are " +
                     "contained in every FlowFile should be included in the final JSON value generated.")
@@ -103,7 +102,7 @@ public class AttributesToNestedJSON extends AbstractProcessor {
             .defaultValue("true")
             .build();
 
-    public static final PropertyDescriptor NULL_VALUE_FOR_EMPTY_STRING = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor NULL_VALUE_FOR_EMPTY_STRING = new PropertyDescriptor.Builder()
             .name(("Null Value"))
             .description("If true a non existing or empty attribute will be NULL in the resulting JSON. If false an empty " +
                     "string will be placed in the JSON")
@@ -113,9 +112,9 @@ public class AttributesToNestedJSON extends AbstractProcessor {
             .build();
 
 
-    public static final Relationship REL_SUCCESS = new Relationship.Builder().name("success")
+    static final Relationship REL_SUCCESS = new Relationship.Builder().name("success")
             .description("Successfully converted attributes to JSON").build();
-    public static final Relationship REL_FAILURE = new Relationship.Builder().name("failure")
+    static final Relationship REL_FAILURE = new Relationship.Builder().name("failure")
             .description("Failed to convert attributes to JSON").build();
 
     private List<PropertyDescriptor> properties;
@@ -147,13 +146,12 @@ public class AttributesToNestedJSON extends AbstractProcessor {
         return relationships;
     }
 
-
     /**
      * Builds the Map of attributes that should be included in the JSON that is emitted from this process.
      *
      * @return Map of values that are feed to a Jackson ObjectMapper
      */
-    protected Map<String, String> buildAttributesMapForFlowFile(FlowFile ff, String atrList,
+    private Map<String, String> buildAttributesMapForFlowFile(FlowFile ff, String atrList,
                                                                 boolean includeCoreAttributes,
                                                                 boolean nullValForEmptyString) {
 
@@ -194,7 +192,7 @@ public class AttributesToNestedJSON extends AbstractProcessor {
      * @param atsToWrite List of Attributes that have already been generated including the CoreAttributes
      * @return Difference of all attributes minus the CoreAttributes
      */
-    protected Map<String, String> removeCoreAttributes(Map<String, String> atsToWrite) {
+    private Map<String, String> removeCoreAttributes(Map<String, String> atsToWrite) {
         for (CoreAttributes c : CoreAttributes.values()) {
             atsToWrite.remove(c.key());
         }
@@ -230,9 +228,13 @@ public class AttributesToNestedJSON extends AbstractProcessor {
                     typedList.put(attribute.getKey(), attribute.getValue());
                 } else {
                     try {
-                        JsonNode node = objectMapper.readTree(attribute.getValue().getBytes());
-                        Object o = objectMapper.treeToValue(node, Object.class);
-                        typedList.put(attribute.getKey(), o);
+                        if (attribute.getValue() != null) {
+                            JsonNode node = objectMapper.readTree(attribute.getValue().getBytes());
+                            Object o = objectMapper.treeToValue(node, Object.class);
+                            typedList.put(attribute.getKey(), o);
+                        } else {
+                            typedList.put(attribute.getKey(), null);
+                        }
                     } catch (JsonProcessingException e) {
                         // Any JSON that can't be parsed is stored as a string.
                         typedList.put(attribute.getKey(), attribute.getValue());
