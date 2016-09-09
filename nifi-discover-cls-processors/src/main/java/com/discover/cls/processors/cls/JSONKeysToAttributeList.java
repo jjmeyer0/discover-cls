@@ -18,6 +18,8 @@ package com.discover.cls.processors.cls;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.nifi.annotation.behavior.ReadsAttribute;
+import org.apache.nifi.annotation.behavior.ReadsAttributes;
 import org.apache.nifi.annotation.behavior.WritesAttribute;
 import org.apache.nifi.annotation.behavior.WritesAttributes;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
@@ -47,6 +49,10 @@ import java.util.Set;
 @WritesAttributes({
         @WritesAttribute(attribute = "attribute-list", description = "This attribute will contain all first level keys separated by the define separator.")
 })
+@ReadsAttributes({
+    @ReadsAttribute(attribute = "X", description = "X is defined in JSON Attribute Name. It is not required. If it is then this processor will read this attribute's value to create " +
+            "the attribute list.")
+})
 @SeeAlso({AttributesToTypedJSON.class, JSONToAttributes.class})
 public class JSONKeysToAttributeList extends AbstractProcessor {
     static final String ATTRIBUTE_LIST_ATTRIBUTE = "attribute-list";
@@ -60,6 +66,16 @@ public class JSONKeysToAttributeList extends AbstractProcessor {
             .defaultValue(",")
             .build();
 
+    static final PropertyDescriptor JSON_ATTRIBUTE = new PropertyDescriptor.Builder()
+            .name("JSON Attribute Name")
+            .displayName("JSON Attribute Name")
+            .description("If this value is populated then this processor will read JSON from attribute named in this property. For example, if this property is X, it will try to read " +
+                    "JSON from a flow file's X attribute instead of its content.")
+            .required(false)
+            .expressionLanguageSupported(true)
+            .addValidator(StandardValidators.ATTRIBUTE_KEY_VALIDATOR)
+            .build();
+
     static final Relationship REL_SUCCESS = new Relationship.Builder()
             .name("success")
             .description("Successfully converted JSON to attributes.")
@@ -71,7 +87,7 @@ public class JSONKeysToAttributeList extends AbstractProcessor {
             .build();
 
     private static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE)));
-    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Collections.singletonList(ATTRIBUTE_LIST_SEPARATOR));
+    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(ATTRIBUTE_LIST_SEPARATOR, JSON_ATTRIBUTE));
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -92,15 +108,22 @@ public class JSONKeysToAttributeList extends AbstractProcessor {
             return;
         }
 
-        final byte[] content = FlowFileUtils.extractMessage(flowFile, session);
+        final String attributeName = context.getProperty(JSON_ATTRIBUTE).evaluateAttributeExpressions().getValue();
+        final String attributeContent = flowFile.getAttribute(attributeName);
+        final byte[] content = attributeContent == null ? FlowFileUtils.extractMessage(flowFile, session) : attributeContent.getBytes();
         final String separator = context.getProperty(ATTRIBUTE_LIST_SEPARATOR).getValue();
 
         try {
-            final JsonNode jsonNode = OBJECT_MAPPER.readTree(content);
-            final String attributeList = createAttributeList(jsonNode, separator);
+            if (content == null || Arrays.equals(content, new byte[0])) {
+                flowFile = session.putAttribute(flowFile, ATTRIBUTE_LIST_ATTRIBUTE, "");
+                session.transfer(flowFile, REL_SUCCESS);
+            } else {
+                final JsonNode jsonNode = OBJECT_MAPPER.readTree(content);
+                final String attributeList = createAttributeList(jsonNode, separator);
 
-            flowFile = session.putAttribute(flowFile, ATTRIBUTE_LIST_ATTRIBUTE, attributeList);
-            session.transfer(flowFile, REL_SUCCESS);
+                flowFile = session.putAttribute(flowFile, ATTRIBUTE_LIST_ATTRIBUTE, attributeList);
+                session.transfer(flowFile, REL_SUCCESS);
+            }
         } catch (IOException e) {
             getLogger().error("Failed parsing JSON.", new Object[]{e});
             session.transfer(flowFile, REL_FAILURE);

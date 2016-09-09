@@ -119,7 +119,8 @@ public class TestJSONKeysToAttributeList {
     public void makeSurePropertyDescriptorsAreProperlySetup() throws Exception {
         List<PropertyDescriptor> supportedPropertyDescriptors = new JSONKeysToAttributeList().getSupportedPropertyDescriptors();
         assertTrue(supportedPropertyDescriptors.contains(JSONKeysToAttributeList.ATTRIBUTE_LIST_SEPARATOR));
-        assertEquals(1, supportedPropertyDescriptors.size());
+        assertTrue(supportedPropertyDescriptors.contains(JSONKeysToAttributeList.JSON_ATTRIBUTE));
+        assertEquals(2, supportedPropertyDescriptors.size());
     }
 
     @Test
@@ -139,5 +140,95 @@ public class TestJSONKeysToAttributeList {
         testRunner.run();
 
         testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_FAILURE);
+    }
+
+    @Test
+    public void makeSureProcessorProperlyReadsFromAttributeInsteadOfContent() throws Exception {
+        testRunner.setProperty(JSONKeysToAttributeList.ATTRIBUTE_LIST_SEPARATOR, "|");
+        testRunner.setProperty(JSONKeysToAttributeList.JSON_ATTRIBUTE, "json-value");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.write(flowFile, new OutputStreamCallback() {
+            @Override
+            public void process(OutputStream out) throws IOException {
+                out.write("{\"key1\":\"value1\",\"key2\":\"val2\"}".getBytes());
+            }
+        });
+
+        flowFile = session.putAttribute(flowFile, "json-value", "{\"k6\":\"v6\"}");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+
+        assertEquals(1, flowFiles.size());
+
+        for (FlowFile file : flowFiles) {
+            assertEquals("k6", file.getAttribute(JSONKeysToAttributeList.ATTRIBUTE_LIST_ATTRIBUTE));
+        }
+    }
+
+    @Test
+    public void makeSureNothingIsReturnedIfTopLevelJsonIsAnArray() throws Exception {
+        testRunner.setProperty(JSONKeysToAttributeList.ATTRIBUTE_LIST_SEPARATOR, "|");
+        testRunner.setProperty(JSONKeysToAttributeList.JSON_ATTRIBUTE, "json-value");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.write(flowFile, new OutputStreamCallback() {
+            @Override
+            public void process(OutputStream out) throws IOException {
+                out.write("{\"key1\":\"value1\",\"key2\":\"val2\"}".getBytes());
+            }
+        });
+
+        flowFile = session.putAttribute(flowFile, "json-value", "[\"k6\",\"v6\"]");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+
+        assertEquals(1, flowFiles.size());
+
+        for (FlowFile file : flowFiles) {
+            assertEquals("", file.getAttribute(JSONKeysToAttributeList.ATTRIBUTE_LIST_ATTRIBUTE));
+        }
+    }
+
+    @Test
+    public void makeSureEmptyContentIsProperlyHandled() throws Exception {
+        testRunner.setProperty(JSONKeysToAttributeList.ATTRIBUTE_LIST_SEPARATOR, "|");
+        testRunner.setProperty(JSONKeysToAttributeList.JSON_ATTRIBUTE, "json-value");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.write(flowFile, new OutputStreamCallback() {
+            @Override
+            public void process(OutputStream out) throws IOException {
+                out.write("{\"key1\":\"value1\",\"key2\":\"val2\"}".getBytes());
+            }
+        });
+
+        flowFile = session.putAttribute(flowFile, "json-value", "");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+
+        assertEquals(1, flowFiles.size());
+
+        for (FlowFile file : flowFiles) {
+            assertEquals("", file.getAttribute(JSONKeysToAttributeList.ATTRIBUTE_LIST_ATTRIBUTE));
+        }
     }
 }

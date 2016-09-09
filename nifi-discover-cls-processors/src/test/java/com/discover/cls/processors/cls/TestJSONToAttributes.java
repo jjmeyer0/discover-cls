@@ -139,7 +139,8 @@ public class TestJSONToAttributes {
         List<PropertyDescriptor> supportedPropertyDescriptors = new JSONToAttributes().getSupportedPropertyDescriptors();
         assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.OVERRIDE_ATTRIBUTES));
         assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.PRESERVE_TYPE));
-        assertEquals(2, supportedPropertyDescriptors.size());
+        assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.JSON_ATTRIBUTE));
+        assertEquals(3, supportedPropertyDescriptors.size());
     }
 
     @Test
@@ -196,5 +197,86 @@ public class TestJSONToAttributes {
         for (MockFlowFile file : flowFiles) {
             assertEquals("somethingelse", file.getAttribute("test"));
         }
+    }
+
+    @Test
+    public void verifyJsonProperlySavesAttributesWhenReadingFromAttribute() throws Exception {
+        testRunner.setProperty(JSONToAttributes.PRESERVE_TYPE, "false");
+        testRunner.setProperty(JSONToAttributes.JSON_ATTRIBUTE, "test");
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.write(flowFile, new OutputStreamCallback() {
+            @Override
+            public void process(OutputStream out) throws IOException {
+                out.write("{\"test\":\"something\"}".getBytes());
+            }
+        });
+
+        flowFile = session.putAttribute(flowFile, "test", "{\"test\":\"somethingelse\"}");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+
+        assertEquals(1, flowFiles.size());
+
+        for (MockFlowFile file : flowFiles) {
+            assertEquals("somethingelse", file.getAttribute("test"));
+        }
+    }
+
+    @Test
+    public void emptyAttributeShouldProperlyFlowThrough() throws Exception {
+        testRunner.setProperty(JSONToAttributes.PRESERVE_TYPE, "false");
+        testRunner.setProperty(JSONToAttributes.JSON_ATTRIBUTE, "test");
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.write(flowFile, new OutputStreamCallback() {
+            @Override
+            public void process(OutputStream out) throws IOException {
+                out.write("{\"test\":\"something\"}".getBytes());
+            }
+        });
+
+        flowFile = session.putAttribute(flowFile, "test", "");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+
+        assertEquals(1, flowFiles.size());
+
+        for (MockFlowFile file : flowFiles) {
+            assertEquals("", file.getAttribute("test"));
+        }
+    }
+
+    @Test
+    public void emptyContentShouldProperlyFlowThrough() throws Exception {
+        testRunner.setProperty(JSONToAttributes.PRESERVE_TYPE, "false");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.write(flowFile, new OutputStreamCallback() {
+            @Override
+            public void process(OutputStream out) throws IOException {
+                out.write("".getBytes());
+            }
+        });
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+
+        assertEquals(1, flowFiles.size());
     }
 }
