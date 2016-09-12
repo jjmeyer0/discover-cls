@@ -226,6 +226,8 @@ public class RouteAndSplitOnAttribute extends AbstractProcessor {
 
         boolean foundMatch = false;
         final Map<Relationship, PropertyValue> propMap = this.propertyMap;
+        final Set<Relationship> matchedRelationships = new HashSet<>();
+        final Map<FlowFile, Relationship> flowFileRelationshipMap = new HashMap<>();
         int i = 0;
         for (final Map.Entry<Relationship, PropertyValue> entry : propMap.entrySet()) {
             final PropertyValue value = entry.getValue();
@@ -259,11 +261,51 @@ public class RouteAndSplitOnAttribute extends AbstractProcessor {
                 f = session.putAttribute(f, attributeKey, attributeValue == null ? "" : attributeValue);
                 f = session.putAttribute(f, "original.uuid", flowFile.getAttribute(CoreAttributes.UUID.key()));
                 // TODO: check type of routing and route accordingly. do i always send to matched?
-                session.transfer(f, entry.getKey());
-                session.getProvenanceReporter().route(f, entry.getKey());
+
+                flowFileRelationshipMap.put(f, entry.getKey());
+//                session.transfer(f, entry.getKey());
+//                session.getProvenanceReporter().route(f, entry.getKey());
+                if (!matchedRelationships.contains(entry.getKey())) {
+                    matchedRelationships.add(entry.getKey());
+                }
                 foundMatch = true;
             }
             i++;
+        }
+
+        switch (context.getProperty(ROUTE_STRATEGY).getValue()) {
+            case routeAllMatchValue:
+                if (matchedRelationships.size() == propMap.size()) {
+                    for (final Map.Entry<FlowFile, Relationship> entry : flowFileRelationshipMap.entrySet()) {
+                        getLogger().info("Cloned {} into {} and routing clone to relationship {}", new Object[]{flowFile, entry.getValue(), entry.getKey()});
+                        session.getProvenanceReporter().route(entry.getKey(), REL_MATCH);
+                        session.transfer(entry.getKey(), REL_MATCH);
+                    }
+                } else {
+                    session.getProvenanceReporter().route(flowFile, REL_NO_MATCH);
+                    session.transfer(flowFile, REL_NO_MATCH);
+                }
+                break;
+            case routeAnyMatches:
+                if (matchedRelationships.isEmpty()) {
+                    session.getProvenanceReporter().route(flowFile, REL_NO_MATCH);
+                    session.transfer(flowFile, REL_NO_MATCH);
+                } else {
+                    for (final Map.Entry<FlowFile, Relationship> entry : flowFileRelationshipMap.entrySet()) {
+                        getLogger().info("Cloned {} into {} and routing clone to relationship {}", new Object[]{flowFile, entry.getValue(), entry.getKey()});
+                        session.getProvenanceReporter().route(entry.getKey(), REL_MATCH);
+                        session.transfer(entry.getKey(), REL_MATCH);
+                    }
+                }
+                break;
+            case routePropertyNameValue:
+            default:
+                for (final Map.Entry<FlowFile, Relationship> entry : flowFileRelationshipMap.entrySet()) {
+                    getLogger().info("Cloned {} into {} and routing clone to relationship {}", new Object[]{flowFile, entry.getValue(), entry.getKey()});
+                    session.getProvenanceReporter().route(entry.getKey(), entry.getValue());
+                    session.transfer(entry.getKey(), entry.getValue());
+                }
+                break;
         }
 
         if (!foundMatch) {
