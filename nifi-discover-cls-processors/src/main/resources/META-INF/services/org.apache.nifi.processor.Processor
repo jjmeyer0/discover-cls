@@ -15,3 +15,4 @@
 com.discover.cls.processors.cls.JSONToAttributes
 com.discover.cls.processors.cls.JSONKeysToAttributeList
 com.discover.cls.processors.cls.AttributesToTypedJSON
+com.discover.cls.processors.cls.RouteAndSplitOnAttribute
