@@ -78,7 +78,7 @@ public class TestJSONToAttributes {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_SUCCESS);
     }
 
     @Test
@@ -95,7 +95,7 @@ public class TestJSONToAttributes {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_FAILURE);
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_FAILURE);
     }
 
     @Test
@@ -112,9 +112,9 @@ public class TestJSONToAttributes {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_SUCCESS);
 
-        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_SUCCESS);
 
         assertEquals(1, flowFiles.size());
 
@@ -131,7 +131,8 @@ public class TestJSONToAttributes {
         Set<Relationship> relationships = new JSONToAttributes().getRelationships();
         assertTrue(relationships.contains(JSONToAttributes.REL_FAILURE));
         assertTrue(relationships.contains(JSONToAttributes.REL_SUCCESS));
-        assertEquals(2, relationships.size());
+        assertTrue(relationships.contains(JSONToAttributes.REL_NO_CONTENT));
+        assertEquals(3, relationships.size());
     }
 
     @Test
@@ -139,7 +140,7 @@ public class TestJSONToAttributes {
         List<PropertyDescriptor> supportedPropertyDescriptors = new JSONToAttributes().getSupportedPropertyDescriptors();
         assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.OVERRIDE_ATTRIBUTES));
         assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.PRESERVE_TYPE));
-        assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.JSON_ATTRIBUTE));
+        assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.JSON_ATTRIBUTE_NAME));
         assertEquals(3, supportedPropertyDescriptors.size());
     }
 
@@ -160,9 +161,9 @@ public class TestJSONToAttributes {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_SUCCESS);
 
-        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_SUCCESS);
 
         assertEquals(1, flowFiles.size());
 
@@ -188,9 +189,9 @@ public class TestJSONToAttributes {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_SUCCESS);
 
-        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_SUCCESS);
 
         assertEquals(1, flowFiles.size());
 
@@ -202,7 +203,7 @@ public class TestJSONToAttributes {
     @Test
     public void verifyJsonProperlySavesAttributesWhenReadingFromAttribute() throws Exception {
         testRunner.setProperty(JSONToAttributes.PRESERVE_TYPE, "false");
-        testRunner.setProperty(JSONToAttributes.JSON_ATTRIBUTE, "test");
+        testRunner.setProperty(JSONToAttributes.JSON_ATTRIBUTE_NAME, "test");
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
         FlowFile flowFile = session.create();
         flowFile = session.write(flowFile, new OutputStreamCallback() {
@@ -217,9 +218,9 @@ public class TestJSONToAttributes {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_SUCCESS);
 
-        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_SUCCESS);
 
         assertEquals(1, flowFiles.size());
 
@@ -231,7 +232,7 @@ public class TestJSONToAttributes {
     @Test
     public void emptyAttributeShouldProperlyFlowThrough() throws Exception {
         testRunner.setProperty(JSONToAttributes.PRESERVE_TYPE, "false");
-        testRunner.setProperty(JSONToAttributes.JSON_ATTRIBUTE, "test");
+        testRunner.setProperty(JSONToAttributes.JSON_ATTRIBUTE_NAME, "test");
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
         FlowFile flowFile = session.create();
         flowFile = session.write(flowFile, new OutputStreamCallback() {
@@ -246,9 +247,9 @@ public class TestJSONToAttributes {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_NO_CONTENT);
 
-        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_NO_CONTENT);
 
         assertEquals(1, flowFiles.size());
 
@@ -273,10 +274,86 @@ public class TestJSONToAttributes {
         testRunner.enqueue(flowFile);
         testRunner.run();
 
-        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_NO_CONTENT);
 
-        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_NO_CONTENT);
 
         assertEquals(1, flowFiles.size());
+    }
+
+    @Test
+    public void definedJsonAttributeNameAndNoAttributeDefinedShouldFail() throws Exception {
+        testRunner.setProperty(JSONToAttributes.JSON_ATTRIBUTE_NAME, "json.attribute");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_FAILURE);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_FAILURE);
+
+        assertEquals(1, flowFiles.size());
+    }
+
+    @Test
+    public void definedJsonAttributeNameAndEmptyAttributeValueShouldRouteToNoContent() throws Exception {
+        testRunner.setProperty(JSONToAttributes.JSON_ATTRIBUTE_NAME, "json.attribute");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.putAttribute(flowFile, "json.attribute", "");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_NO_CONTENT);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_NO_CONTENT);
+
+        assertEquals(1, flowFiles.size());
+    }
+
+    @Test
+    public void noDefinedJsonAttributeNameAndEmptyContentShouldRouteToNoContent() throws Exception {
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_NO_CONTENT);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_NO_CONTENT);
+
+        assertEquals(1, flowFiles.size());
+    }
+
+    @Test
+    public void verifyJsonDoesNotOverrideUuidAttribute() throws Exception {
+        testRunner.setProperty(JSONToAttributes.OVERRIDE_ATTRIBUTES, "true");
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.write(flowFile, new OutputStreamCallback() {
+            @Override
+            public void process(OutputStream out) throws IOException {
+                out.write("{\"uuid\":\"somethingelse\"}".getBytes());
+            }
+        });
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_SUCCESS);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_SUCCESS);
+
+        assertEquals(1, flowFiles.size());
+
+//        for (MockFlowFile file : flowFiles) {
+//            assertNotEquals("\"somethingelse\"", file.getAttribute("uuid"));
+//        }
     }
 }

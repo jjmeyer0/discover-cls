@@ -18,6 +18,7 @@ package com.discover.cls.processors.cls;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.behavior.ReadsAttribute;
 import org.apache.nifi.annotation.behavior.ReadsAttributes;
 import org.apache.nifi.annotation.behavior.WritesAttribute;
@@ -45,13 +46,14 @@ import java.util.Map;
 import java.util.Set;
 
 @Tags({"json", "attributes", "flowfile"})
+@InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
 @CapabilityDescription("This processor will parse a JSON document and extract all first level keys from the JSON object. It will put all these attributes to 'attribute-list'.")
 @WritesAttributes({
         @WritesAttribute(attribute = "attribute-list", description = "This attribute will contain all first level keys separated by the define separator.")
 })
 @ReadsAttributes({
-    @ReadsAttribute(attribute = "X", description = "X is defined in JSON Attribute Name. It is not required. If it is then this processor will read this attribute's value to create " +
-            "the attribute list.")
+        @ReadsAttribute(attribute = "X", description = "X is defined in JSON Attribute Name. It is not required. If it is then this processor will read this attribute's value to create " +
+                "the attribute list.")
 })
 @SeeAlso({AttributesToTypedJSON.class, JSONToAttributes.class})
 public class JSONKeysToAttributeList extends AbstractProcessor {

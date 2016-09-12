@@ -18,8 +18,11 @@ package com.discover.cls.processors.cls;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.behavior.ReadsAttribute;
 import org.apache.nifi.annotation.behavior.ReadsAttributes;
+import org.apache.nifi.annotation.behavior.WritesAttribute;
+import org.apache.nifi.annotation.behavior.WritesAttributes;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
@@ -33,7 +36,6 @@ import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -44,16 +46,25 @@ import java.util.Map;
 import java.util.Set;
 
 
+/**
+ * TODO: document w/ additional details.
+ */
 @Tags({"json", "attributes", "flowfile"})
-@CapabilityDescription("This processor will take a JSON string from and convert each of the top level keys to attributes. This processor will read the JSON " +
-        "from the attribute defined if property descriptor, JSON Attribute Name. If this is not defined then the content will be read. Each attribute value created " +
-        "will be a valid JSON. For example, if a JSON string, '{\"key1\":\"val1\",\"key2\":0}', is converted to attributes, the following " +
-        "attributes and their values would be created: key1 with value \"val1\" and key2 with value 0. Notice the quotes. This is done because " +
-        "each of the values generated from this processor must be valid JSON. However, this functionality is configurable. This is the default behavior. " +
-        "If this is not desired then switch the property 'Preserve JSON Type' to false. This will then output string values without the outer double quotes.")
+@InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
+@CapabilityDescription("This processor will take a JSON string from either a define attribute or the flow file's content. It will convert each of the top level keys to attributes flow file " +
+        "attributes. This processor will read the JSON from the attribute defined in property descriptor named 'JSON Attribute Name.' If this is not defined then the content will be read. " +
+        "Be aware if if 'JSON Attribute Name' has a value then the content of the flow file will not be looked at. If 'Preserverve JSON Type' is true then each attribute value created will " +
+        "be a valid JSON. For example, if a JSON string, '{\"key1\":\"val1\",\"key2\":0}', is converted to attributes, the following attributes and their values would be created: key1 with " +
+        "value \"val1\" and key2 with value 0. Notice the quotes. This is done because each of the values generated from this processor must be valid JSON. However, this functionality is " +
+        "configurable. This is the default behavior. If this is not desired then switch the property 'Preserve JSON Type' to false. This will then output string values without the outer " +
+        "double quotes.")
 @SeeAlso({AttributesToTypedJSON.class, JSONToAttributes.class, JSONKeysToAttributeList.class})
 @ReadsAttributes({
-    @ReadsAttribute(attribute = "X", description = "The name of the attribute to get the JSON data from. This is optional. X is defined in property descriptor JSON Attribute Name.")
+        @ReadsAttribute(attribute = "X", description = "The name of the attribute to get the JSON data from. This is optional. X is defined in property descriptor JSON Attribute Name.")
+})
+@WritesAttributes({
+        @WritesAttribute(attribute = "Y", description = "Y is the value populated in 'JSON Attribute Name'. If it is populated the processor will read JSON from an attribute with the name " +
+                "in 'JSON Attribute Name'.")
 })
 public class JSONToAttributes extends AbstractProcessor {
     static final PropertyDescriptor OVERRIDE_ATTRIBUTES = new PropertyDescriptor.Builder()
@@ -78,7 +89,7 @@ public class JSONToAttributes extends AbstractProcessor {
             .allowableValues("true", "false")
             .build();
 
-    static final PropertyDescriptor JSON_ATTRIBUTE = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor JSON_ATTRIBUTE_NAME = new PropertyDescriptor.Builder()
             .name("JSON Attribute Name")
             .displayName("JSON Attribute Name")
             .description("If this value is populated then this processor will read JSON from attribute instead of content.")
@@ -97,9 +108,14 @@ public class JSONToAttributes extends AbstractProcessor {
             .description("Failed converting JSON to attributes.")
             .build();
 
+    static final Relationship REL_NO_CONTENT = new Relationship.Builder()
+            .name("no content")
+            .description("The define attribute and the flow file content does not contain data.")
+            .build();
 
-    private static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE)));
-    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(OVERRIDE_ATTRIBUTES, PRESERVE_TYPE, JSON_ATTRIBUTE));
+
+    private static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE, REL_NO_CONTENT)));
+    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(OVERRIDE_ATTRIBUTES, PRESERVE_TYPE, JSON_ATTRIBUTE_NAME));
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -120,22 +136,22 @@ public class JSONToAttributes extends AbstractProcessor {
             return;
         }
 
-        final String attributeName = context.getProperty(JSON_ATTRIBUTE).evaluateAttributeExpressions().getValue();
-        final String attributeContent = flowFile.getAttribute(attributeName);
-        final byte[] content = attributeContent == null ? FlowFileUtils.extractMessage(flowFile, session) : attributeContent.getBytes();
+        final String attributeNameFromProperty = context.getProperty(JSON_ATTRIBUTE_NAME).evaluateAttributeExpressions().getValue();
+        final String attributeContent = flowFile.getAttribute(attributeNameFromProperty);
+        final byte[] content = getContent(session, flowFile, attributeNameFromProperty, attributeContent);
         final boolean toOverride = context.getProperty(OVERRIDE_ATTRIBUTES).asBoolean();
         final boolean preserveType = context.getProperty(PRESERVE_TYPE).asBoolean();
 
-        if (attributeName != null && !"".equals(attributeName) && attributeContent == null) {
-            getLogger().error(JSON_ATTRIBUTE.getDisplayName() + " is not empty, but there is not value for attribute: " + attributeName);
+        if (attributeNameFromProperty != null && !"".equals(attributeNameFromProperty) && attributeContent == null) {
+            getLogger().error(JSON_ATTRIBUTE_NAME.getDisplayName() + " is defined, but the attribute '" + attributeNameFromProperty + "' does not exist.");
             session.transfer(flowFile, REL_FAILURE);
             return;
         }
 
         if (content == null || Arrays.equals(content, new byte[0])) {
             // No content. push through.
-            getLogger().info("Not JSON content is defined. Passing flow file to success relationship.");
-            session.transfer(flowFile, REL_SUCCESS);
+            getLogger().debug("No content is defined. Passing flow file to 'no content' relationship.");
+            session.transfer(flowFile, REL_NO_CONTENT);
             return;
         }
 
@@ -185,6 +201,14 @@ public class JSONToAttributes extends AbstractProcessor {
         } catch (IOException e) {
             getLogger().error("Failed parsing JSON.", new Object[]{e});
             session.transfer(flowFile, REL_FAILURE);
+        }
+    }
+
+    private byte[] getContent(ProcessSession session, FlowFile flowFile, String attributeNameFromProperty, String attributeContent) {
+        if (attributeNameFromProperty == null || "".equals(attributeNameFromProperty)) {
+            return FlowFileUtils.extractMessage(flowFile, session);
+        } else {
+            return attributeContent == null ? new byte[0] : attributeContent.getBytes();
         }
     }
 }
