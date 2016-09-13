@@ -45,10 +45,10 @@ public class TestRouteAndSplitOnAttribute {
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
         FlowFile flowFile = session.create();
 
-        flowFile = session.putAttribute(flowFile, "k1", "v1");
+        flowFile = session.putAttribute(flowFile, "a_ip", "v1");
         flowFile = session.putAttribute(flowFile, "k2", "v2");
-        flowFile = session.putAttribute(flowFile, "k3", "v3");
-        flowFile = session.putAttribute(flowFile, "k4", "v4");
+        flowFile = session.putAttribute(flowFile, "c_ip", "v3");
+        flowFile = session.putAttribute(flowFile, "d_ip", "v4");
 
         testRunner.enqueue(flowFile);
         testRunner.run();
@@ -60,10 +60,10 @@ public class TestRouteAndSplitOnAttribute {
         assertEquals(3, flowFiles.size());
 
         for (MockFlowFile mockFlowFile : flowFiles) {
-            mockFlowFile.assertAttributeEquals("k1", "v1");
+            mockFlowFile.assertAttributeEquals("a_ip", "v1");
+            mockFlowFile.assertAttributeEquals("c_ip", "v3");
             mockFlowFile.assertAttributeEquals("k2", "v2");
-            mockFlowFile.assertAttributeEquals("k3", "v3");
-            mockFlowFile.assertAttributeEquals("k4", "v4");
+            mockFlowFile.assertAttributeEquals("d_ip", "v4");
         }
     }
 
@@ -79,6 +79,9 @@ public class TestRouteAndSplitOnAttribute {
 
         flowFile = session.putAttribute(flowFile, "k1", "v1");
         flowFile = session.putAttribute(flowFile, "a_ip", "v2");
+        flowFile = session.putAttribute(flowFile, "c_ip", "v2");
+        flowFile = session.putAttribute(flowFile, "d_ip", "v2");
+        flowFile = session.putAttribute(flowFile, "b1", "b1");
         flowFile = session.putAttribute(flowFile, "k3", "v3");
         flowFile = session.putAttribute(flowFile, "k4", "v4");
 
@@ -102,5 +105,127 @@ public class TestRouteAndSplitOnAttribute {
             }
 
         }
+    }
+
+    @Test
+    public void makeSureRouteAllMatchValueProperlyTransfersToMatchWhenAllMatch() throws Exception {
+        testRunner.setProperty(RouteAndSplitOnAttribute.ROUTE_STRATEGY, RouteAndSplitOnAttribute.ROUTE_ALL_MATCH);
+        testRunner.setProperty(RouteAndSplitOnAttribute.ATTRIBUTE_LIST_TO_MATCH, "a_ip,b,c_ip,d_ip,e");
+        testRunner.setProperty("matched.ips", ".*_ip");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+
+        flowFile = session.putAttribute(flowFile, "a_ip", "v1");
+        flowFile = session.putAttribute(flowFile, "k2", "v2");
+        flowFile = session.putAttribute(flowFile, "c_ip", "v3");
+        flowFile = session.putAttribute(flowFile, "d_ip", "v4");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(RouteAndSplitOnAttribute.REL_MATCH);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(RouteAndSplitOnAttribute.REL_MATCH);
+
+        assertEquals(3, flowFiles.size());
+
+        for (MockFlowFile mockFlowFile : flowFiles) {
+            mockFlowFile.assertAttributeEquals("a_ip", "v1");
+            mockFlowFile.assertAttributeEquals("k2", "v2");
+            mockFlowFile.assertAttributeEquals("c_ip", "v3");
+            mockFlowFile.assertAttributeEquals("d_ip", "v4");
+        }
+    }
+
+    @Test
+    public void makeSureRouteAllMatchValueProperlyTransfersToNoMatchWhenAllMatch() throws Exception {
+        testRunner.setProperty(RouteAndSplitOnAttribute.ROUTE_STRATEGY, RouteAndSplitOnAttribute.ROUTE_ALL_MATCH);
+        testRunner.setProperty(RouteAndSplitOnAttribute.ATTRIBUTE_LIST_TO_MATCH, "b,e,a_ip");
+        testRunner.setProperty("matched.ips", ".*b");
+        testRunner.setProperty("matched.other", ".*_ip");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+
+        flowFile = session.putAttribute(flowFile, "b", "v1");
+        flowFile = session.putAttribute(flowFile, "k2", "v2");
+        flowFile = session.putAttribute(flowFile, "k3", "v3");
+        flowFile = session.putAttribute(flowFile, "k4", "v4");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(RouteAndSplitOnAttribute.REL_NO_MATCH);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(RouteAndSplitOnAttribute.REL_NO_MATCH);
+
+        assertEquals(1, flowFiles.size());
+
+        for (MockFlowFile mockFlowFile : flowFiles) {
+            mockFlowFile.assertAttributeEquals("b", "v1");
+            mockFlowFile.assertAttributeEquals("k2", "v2");
+            mockFlowFile.assertAttributeEquals("k3", "v3");
+            mockFlowFile.assertAttributeEquals("k4", "v4");
+        }
+    }
+
+    @Test
+    public void routeAnyMatchingValuesShouldRouteAllThatMatchToMatchedAndOthersToNotMatched() throws Exception {
+        testRunner.setProperty(RouteAndSplitOnAttribute.ROUTE_STRATEGY, RouteAndSplitOnAttribute.ROUTE_ANY_MATCHES);
+        testRunner.setProperty(RouteAndSplitOnAttribute.ATTRIBUTE_LIST_TO_MATCH, "a_ip,c_ip,d_ip,e");
+        testRunner.setProperty("matched.ips", ".*_ip");
+        testRunner.setProperty("matched.other", "test");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+
+        flowFile = session.putAttribute(flowFile, "a_ip", "v1");
+        flowFile = session.putAttribute(flowFile, "k2", "v2");
+        flowFile = session.putAttribute(flowFile, "c_ip", "v3");
+        flowFile = session.putAttribute(flowFile, "test", "v3");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertTransferCount(RouteAndSplitOnAttribute.REL_MATCH, 2);
+        testRunner.assertTransferCount(RouteAndSplitOnAttribute.REL_NO_MATCH, 0);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(RouteAndSplitOnAttribute.REL_MATCH);
+        for (MockFlowFile mockFlowFile : flowFiles) {
+            mockFlowFile.assertAttributeEquals("a_ip", "v1");
+            mockFlowFile.assertAttributeEquals("c_ip", "v3");
+            mockFlowFile.assertAttributeEquals("k2", "v2");
+        }
+
+    }
+
+    @Test
+    public void error() throws Exception {
+        testRunner.setProperty(RouteAndSplitOnAttribute.ROUTE_STRATEGY, RouteAndSplitOnAttribute.ROUTE_ANY_MATCHES);
+        testRunner.setProperty("match.ip", ".*_ip");
+        testRunner.setProperty("test", "test");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+
+        flowFile = session.putAttribute(flowFile, "a_ip", "v1");
+        flowFile = session.putAttribute(flowFile, "k2", "v2");
+        flowFile = session.putAttribute(flowFile, "c_ip", "v3");
+        flowFile = session.putAttribute(flowFile, "k3", "v3");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertTransferCount(RouteAndSplitOnAttribute.REL_MATCH, 2);
+        testRunner.assertTransferCount(RouteAndSplitOnAttribute.REL_NO_MATCH, 0);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(RouteAndSplitOnAttribute.REL_MATCH);
+        for (MockFlowFile mockFlowFile : flowFiles) {
+            mockFlowFile.assertAttributeEquals("a_ip", "v1");
+            mockFlowFile.assertAttributeEquals("c_ip", "v3");
+            mockFlowFile.assertAttributeEquals("k2", "v2");
+        }
+
     }
 }
