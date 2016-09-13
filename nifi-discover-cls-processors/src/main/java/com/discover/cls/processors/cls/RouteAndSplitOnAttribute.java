@@ -66,9 +66,9 @@ import java.util.concurrent.atomic.AtomicReference;
 @Tags({"attributes", "routing", "route", "Attribute Expression Language", "regexp", "regex", "Regular Expression", "Expression Language"})
 @CapabilityDescription("This processor will route flow files and filter attributes based on a few defined properties. It uses regular expressions to match against the attributes.")
 @WritesAttributes({
-        @WritesAttribute(attribute = "RouteAndSplitOnAttribute.Route", description = "The dynamic attribute that may be a relationship name."),
-        @WritesAttribute(attribute = "RouteAndSplitOnAttribute.Attribute", description = "The attribute matched and routed on."),
-        @WritesAttribute(attribute = "RouteAndSplitOnAttribute.Value", description = "The value of the attribute that was matched and routed on."),
+        @WritesAttribute(attribute = "RouteAndSplitOnAttribute.Matched.Route", description = "The dynamic attribute that may be a relationship name."),
+        @WritesAttribute(attribute = "RouteAndSplitOnAttribute.Matched.Attribute", description = "The attribute matched and routed on."),
+        @WritesAttribute(attribute = "RouteAndSplitOnAttribute.Matched.Value", description = "The value of the attribute that was matched and routed on."),
         @WritesAttribute(attribute = "original-uuid", description = "If a flow file is cloned, this is the UUID of the flow file that was cloned from."),
 })
 @DynamicRelationship(name = "Name from Dynamic Property", description = "FlowFiles that match the Dynamic Property's Attribute Expression Language")
@@ -267,10 +267,15 @@ public class RouteAndSplitOnAttribute extends AbstractProcessor {
                 break;
             case ROUTE_PROPERTY_NAME_VALUE:
             default:
-                for (final Map.Entry<FlowFile, Relationship> entry : getFlowFilesToSend(session, context, flowFile, propMap, matchedRelationships).entrySet()) {
-                    getLogger().info("Cloned {} into {} and routing clone to relationship {}", new Object[]{flowFile, entry.getValue(), entry.getKey()});
-                    session.getProvenanceReporter().route(entry.getKey(), entry.getValue());
-                    session.transfer(entry.getKey(), entry.getValue());
+                if (matchedRelationships.isEmpty()) {
+                    session.getProvenanceReporter().route(flowFile, REL_NO_MATCH);
+                    session.transfer(flowFile, REL_NO_MATCH);
+                } else {
+                    for (final Map.Entry<FlowFile, Relationship> entry : getFlowFilesToSend(session, context, flowFile, propMap, matchedRelationships).entrySet()) {
+                        getLogger().info("Cloned {} into {} and routing clone to relationship {}", new Object[]{flowFile, entry.getValue(), entry.getKey()});
+                        session.getProvenanceReporter().route(entry.getKey(), entry.getValue());
+                        session.transfer(entry.getKey(), entry.getValue());
+                    }
                 }
                 break;
         }
@@ -286,17 +291,10 @@ public class RouteAndSplitOnAttribute extends AbstractProcessor {
             final String patternToMatchAgainst = value.evaluateAttributeExpressions(flowFile).getValue();
             final Set<String> attributesToMatch = getAttributesToMatch(context, flowFile);
             final Set<String> attributesToKeep = getAttributesToKeep(context, flowFile);
+            final List<String> allAttributesToMatch = getMatchedAttributes(patternToMatchAgainst, attributesToMatch);
 
-            final List<String> allAttributesToMatch = new ArrayList<>();
-            for (String attribute : attributesToMatch) {
-                if (attribute.matches(patternToMatchAgainst)) {
-                    allAttributesToMatch.add(attribute);
-                }
-            }
-
-            FlowFile f = flowFile;
             for (int j = 0; j < allAttributesToMatch.size(); j++) {
-                f = i == matchedRelationships.size() - 1 && j == allAttributesToMatch.size() - 1 ? flowFile : session.clone(flowFile);
+                FlowFile f = i == matchedRelationships.size() - 1 && j == allAttributesToMatch.size() - 1 ? flowFile : session.clone(flowFile);
 
                 final String attributeKey = allAttributesToMatch.get(j);
                 final String attributeValue = f.getAttribute(attributeKey);
@@ -315,14 +313,20 @@ public class RouteAndSplitOnAttribute extends AbstractProcessor {
 
                 flowFileRelationshipMap.put(f, relationship);
             }
-
-            if (i == matchedRelationships.size() - 1) {
-                flowFile = f;
-            }
             i++;
         }
 
         return flowFileRelationshipMap;
+    }
+
+    private List<String> getMatchedAttributes(String patternToMatchAgainst, Set<String> attributesToMatch) {
+        List<String> allAttributesToMatch = new ArrayList<>();
+        for (String attribute : attributesToMatch) {
+            if (attribute.matches(patternToMatchAgainst)) {
+                allAttributesToMatch.add(attribute);
+            }
+        }
+        return allAttributesToMatch;
     }
 
     private Set<Relationship> getMatchedRelations(ProcessContext context, FlowFile flowFile, Map<Relationship, PropertyValue> propertyMap) {

@@ -201,7 +201,38 @@ public class TestRouteAndSplitOnAttribute {
     }
 
     @Test
-    public void error() throws Exception {
+    public void makeSureOnlyOneAttributeToMatchWorks() throws Exception {
+        testRunner.setProperty(RouteAndSplitOnAttribute.ROUTE_STRATEGY, RouteAndSplitOnAttribute.ROUTE_ANY_MATCHES);
+        testRunner.setProperty(RouteAndSplitOnAttribute.ATTRIBUTE_LIST_TO_MATCH, "a_ip");
+        testRunner.setProperty(RouteAndSplitOnAttribute.ATTRIBUTES_TO_KEEP, "k2");
+        testRunner.setProperty("matched.ips", ".*_ip");
+        testRunner.setProperty("matched.other", "test");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+
+        flowFile = session.putAttribute(flowFile, "a_ip", "v1");
+        flowFile = session.putAttribute(flowFile, "k2", "v2");
+        flowFile = session.putAttribute(flowFile, "c_ip", "v3");
+        flowFile = session.putAttribute(flowFile, "test", "v3");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertTransferCount(RouteAndSplitOnAttribute.REL_MATCH, 1);
+        testRunner.assertTransferCount(RouteAndSplitOnAttribute.REL_NO_MATCH, 0);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(RouteAndSplitOnAttribute.REL_MATCH);
+        for (MockFlowFile mockFlowFile : flowFiles) {
+            mockFlowFile.assertAttributeEquals("a_ip", "v1");
+            mockFlowFile.assertAttributeEquals("c_ip", null);
+            mockFlowFile.assertAttributeEquals("k2", "v2");
+        }
+
+    }
+
+    @Test
+    public void shouldProperlyRouteOnlyOnesThatMatchEvenWhenOneRelationshipsMatcherDoesntMatchAny() throws Exception {
         testRunner.setProperty(RouteAndSplitOnAttribute.ROUTE_STRATEGY, RouteAndSplitOnAttribute.ROUTE_ANY_MATCHES);
         testRunner.setProperty("match.ip", ".*_ip");
         testRunner.setProperty("test", "test");
@@ -226,6 +257,30 @@ public class TestRouteAndSplitOnAttribute {
             mockFlowFile.assertAttributeEquals("c_ip", "v3");
             mockFlowFile.assertAttributeEquals("k2", "v2");
         }
+
+    }
+
+    @Test
+    public void makeSureAllRouteToUnmatchedWwhenAttributesToMatchDontExist() throws Exception {
+        testRunner.setProperty(RouteAndSplitOnAttribute.ROUTE_STRATEGY, RouteAndSplitOnAttribute.ROUTE_PROPERTY_NAME);
+        testRunner.setProperty(RouteAndSplitOnAttribute.ATTRIBUTE_LIST_TO_MATCH, "a,k2,c,k3");
+        testRunner.setProperty("match.ip", ".*_ip");
+        testRunner.setProperty("match.ipp", ".*_ip");
+        testRunner.setProperty("test", "test");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+
+        flowFile = session.putAttribute(flowFile, "b", "v1");
+        flowFile = session.putAttribute(flowFile, "k", "v2");
+        flowFile = session.putAttribute(flowFile, "c", "v3");
+        flowFile = session.putAttribute(flowFile, "k", "v3");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertTransferCount(RouteAndSplitOnAttribute.REL_MATCH, 0);
+        testRunner.assertTransferCount(RouteAndSplitOnAttribute.REL_NO_MATCH, 1);
 
     }
 }
