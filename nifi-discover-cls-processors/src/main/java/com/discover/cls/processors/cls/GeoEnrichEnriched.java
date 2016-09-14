@@ -48,8 +48,8 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -190,7 +190,7 @@ public class GeoEnrichEnriched extends AbstractProcessor {
             return;
         }
 
-        final Map<String, String> attrs = new LinkedHashMap<>();
+        final Map<String, String> attrs = new HashMap<>();
         attrs.put(new StringBuilder(ipAttributeName).append(".geo.lookup.micros").toString(), String.valueOf(stopWatch.getDuration(TimeUnit.MICROSECONDS)));
         attrs.put(new StringBuilder(ipAttributeName).append(".geo.city").toString(), response.getCity().getName());
 

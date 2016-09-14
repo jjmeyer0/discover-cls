@@ -124,6 +124,7 @@ public class JSONKeysToAttributeList extends AbstractProcessor {
                 final String attributeList = createAttributeList(jsonNode, separator);
 
                 flowFile = session.putAttribute(flowFile, ATTRIBUTE_LIST_ATTRIBUTE, attributeList);
+                session.getProvenanceReporter().modifyAttributes(flowFile);
                 session.transfer(flowFile, REL_SUCCESS);
             }
         } catch (IOException e) {

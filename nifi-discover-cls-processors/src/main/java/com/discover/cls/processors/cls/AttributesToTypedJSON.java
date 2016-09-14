@@ -46,8 +46,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -121,7 +121,7 @@ public class AttributesToTypedJSON extends AbstractProcessor {
         properties.add(NULL_VALUE_FOR_EMPTY_STRING);
         this.properties = Collections.unmodifiableList(properties);
 
-        final Set<Relationship> relationships = new LinkedHashSet<>();
+        final Set<Relationship> relationships = new HashSet<>();
         relationships.add(REL_SUCCESS);
         relationships.add(REL_FAILURE);
         this.relationships = Collections.unmodifiableSet(relationships);

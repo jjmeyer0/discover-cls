@@ -194,6 +194,7 @@ public class JSONToAttributes extends AbstractProcessor {
             }
 
             flowFile = session.putAllAttributes(flowFile, attributes);
+            session.getProvenanceReporter().modifyAttributes(flowFile);
             session.transfer(flowFile, REL_SUCCESS);
         } catch (IOException e) {
             getLogger().error("Failed parsing JSON.", new Object[]{e});

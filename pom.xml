@@ -33,18 +33,6 @@
         <module>nifi-discover-cls-nar</module>
     </modules>
 
-    <properties>
-        <jackson-databind.version>2.6.1</jackson-databind.version>
-    </properties>
-
-    <dependencies>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>${jackson-databind.version}</version>
-        </dependency>
-    </dependencies>
-
     <repositories>
         <repository>
             <releases>
