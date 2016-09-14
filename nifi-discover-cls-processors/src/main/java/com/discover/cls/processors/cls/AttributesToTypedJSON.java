@@ -65,13 +65,8 @@ import java.util.Set;
 public class AttributesToTypedJSON extends AbstractProcessor {
 
     static final String JSON_ATTRIBUTE_NAME = "JSONAttributes";
-    private static final String AT_LIST_SEPARATOR = ",";
-
     static final String DESTINATION_ATTRIBUTE = "flowfile-attribute";
     static final String DESTINATION_CONTENT = "flowfile-content";
-    private static final String APPLICATION_JSON = "application/json";
-
-
     static final PropertyDescriptor ATTRIBUTES_LIST = new PropertyDescriptor.Builder()
             .name("Attributes List")
             .description("Comma separated list of attributes to be included in the resulting JSON. If this value " +
@@ -82,7 +77,6 @@ public class AttributesToTypedJSON extends AbstractProcessor {
             .expressionLanguageSupported(true)
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
-
     static final PropertyDescriptor DESTINATION = new PropertyDescriptor.Builder()
             .name("Destination")
             .description("Control if JSON value is written as a new flowfile attribute '" + JSON_ATTRIBUTE_NAME + "' " +
@@ -92,7 +86,6 @@ public class AttributesToTypedJSON extends AbstractProcessor {
             .allowableValues(DESTINATION_ATTRIBUTE, DESTINATION_CONTENT)
             .defaultValue(DESTINATION_ATTRIBUTE)
             .build();
-
     static final PropertyDescriptor INCLUDE_CORE_ATTRIBUTES = new PropertyDescriptor.Builder()
             .name("Include Core Attributes")
             .description("Determines if the FlowFile org.apache.nifi.flowfile.attributes.CoreAttributes which are " +
@@ -101,7 +94,6 @@ public class AttributesToTypedJSON extends AbstractProcessor {
             .allowableValues("true", "false")
             .defaultValue("true")
             .build();
-
     static final PropertyDescriptor NULL_VALUE_FOR_EMPTY_STRING = new PropertyDescriptor.Builder()
             .name(("Null Value"))
             .description("If true a non existing or empty attribute will be NULL in the resulting JSON. If false an empty " +
@@ -110,16 +102,15 @@ public class AttributesToTypedJSON extends AbstractProcessor {
             .allowableValues("true", "false")
             .defaultValue("false")
             .build();
-
-
     static final Relationship REL_SUCCESS = new Relationship.Builder().name("success")
             .description("Successfully converted attributes to JSON").build();
     static final Relationship REL_FAILURE = new Relationship.Builder().name("failure")
             .description("Failed to convert attributes to JSON").build();
-
+    private static final String AT_LIST_SEPARATOR = ",";
+    private static final String APPLICATION_JSON = "application/json";
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     private List<PropertyDescriptor> properties;
     private Set<Relationship> relationships;
-    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     protected void init(final ProcessorInitializationContext context) {

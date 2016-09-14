@@ -16,19 +16,9 @@
  */
 package com.discover.cls.processors.cls;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
+import com.maxmind.geoip2.exception.GeoIp2Exception;
+import com.maxmind.geoip2.model.CityResponse;
+import com.maxmind.geoip2.record.Subdivision;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.annotation.behavior.EventDriven;
 import org.apache.nifi.annotation.behavior.InputRequirement;
@@ -53,9 +43,18 @@ import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.processors.maxmind.DatabaseReader;
 import org.apache.nifi.util.StopWatch;
 
-import com.maxmind.geoip2.exception.GeoIp2Exception;
-import com.maxmind.geoip2.model.CityResponse;
-import com.maxmind.geoip2.record.Subdivision;
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @EventDriven
 @SideEffectFree
@@ -105,10 +104,9 @@ public class GeoEnrichEnriched extends AbstractProcessor {
             .name("not found")
             .description("Where to route flow files after unsuccessfully enriching attributes because no geo data was found")
             .build();
-
+    private final AtomicReference<DatabaseReader> databaseReaderRef = new AtomicReference<>(null);
     private Set<Relationship> relationships;
     private List<PropertyDescriptor> propertyDescriptors;
-    private final AtomicReference<DatabaseReader> databaseReaderRef = new AtomicReference<>(null);
 
     @Override
     public Set<Relationship> getRelationships() {

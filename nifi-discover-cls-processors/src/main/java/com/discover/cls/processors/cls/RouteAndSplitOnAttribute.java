@@ -58,7 +58,6 @@ import java.util.concurrent.atomic.AtomicReference;
  * defines a custom property that uses a regular expression, for each attribute matched this processor will clone the flow file. If none of the attributes are matched then the flow file will
  * be routed to 'unmatched' relationship.
  * </p>
- *
  */
 @EventDriven
 @SideEffectFree
@@ -313,7 +312,7 @@ public class RouteAndSplitOnAttribute extends AbstractProcessor {
                 f = session.putAttribute(f, ROUTE_ATTRIBUTE_NAME, relationship.getName());
                 f = session.putAttribute(f, ROUTE_ATTRIBUTE_MATCHED_KEY, attributeKey);
                 f = session.putAttribute(f, ROUTE_ATTRIBUTE_MATCHED_VALUE, attributeValue == null ? "" : attributeValue);
-                f = session.putAttribute(f, ROUTE_ATTRIBUTE_FILTER, attributesToKeepValue == null ? "": attributesToKeepValue);
+                f = session.putAttribute(f, ROUTE_ATTRIBUTE_FILTER, attributesToKeepValue == null ? "" : attributesToKeepValue);
                 f = session.putAttribute(f, attributeKey, attributeValue == null ? "" : attributeValue);
                 f = session.putAttribute(f, ORIGINAL_UUID, flowFile.getAttribute(CoreAttributes.UUID.key()));
 
