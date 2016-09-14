@@ -351,9 +351,5 @@ public class TestJSONToAttributes {
         List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_SUCCESS);
 
         assertEquals(1, flowFiles.size());
-
-//        for (MockFlowFile file : flowFiles) {
-//            assertNotEquals("\"somethingelse\"", file.getAttribute("uuid"));
-//        }
     }
 }

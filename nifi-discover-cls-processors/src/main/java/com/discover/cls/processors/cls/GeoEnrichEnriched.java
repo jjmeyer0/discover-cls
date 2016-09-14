@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,7 +76,8 @@ import com.maxmind.geoip2.record.Subdivision;
         @WritesAttribute(attribute = "X.geo.subdivision.isocode.N", description = "The ISO code for the subdivision that is identified by X.geo.subdivision.N"),
         @WritesAttribute(attribute = "X.geo.country", description = "The country identified for this IP address"),
         @WritesAttribute(attribute = "X.geo.country.isocode", description = "The ISO Code for the country identified"),
-        @WritesAttribute(attribute = "X.geo.postalcode", description = "The postal code for the country identified"),})
+        @WritesAttribute(attribute = "X.geo.postalcode", description = "The postal code for the country identified"),
+})
 public class GeoEnrichEnriched extends AbstractProcessor {
 
     public static final PropertyDescriptor GEO_DATABASE_FILE = new PropertyDescriptor.Builder()
@@ -191,7 +192,7 @@ public class GeoEnrichEnriched extends AbstractProcessor {
             return;
         }
 
-        final Map<String, String> attrs = new HashMap<>();
+        final Map<String, String> attrs = new LinkedHashMap<>();
         attrs.put(new StringBuilder(ipAttributeName).append(".geo.lookup.micros").toString(), String.valueOf(stopWatch.getDuration(TimeUnit.MICROSECONDS)));
         attrs.put(new StringBuilder(ipAttributeName).append(".geo.city").toString(), response.getCity().getName());
 

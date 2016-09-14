@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -142,7 +143,7 @@ public class RouteAndSplitOnAttribute extends AbstractProcessor {
      * Cache of dynamic properties set during {@link #onScheduled(ProcessContext)} for quick access in
      * {@link #onTrigger(ProcessContext, ProcessSession)}
      */
-    private volatile Map<Relationship, PropertyValue> propertyMap = new HashMap<>();
+    private volatile Map<Relationship, PropertyValue> propertyMap = new LinkedHashMap<>();
 
     @Override
     protected void init(final ProcessorInitializationContext context) {
@@ -290,7 +291,7 @@ public class RouteAndSplitOnAttribute extends AbstractProcessor {
         final Set<String> attributesToMatch = getAttributesToMatch(context, flowFile);
         final Set<String> attributesToKeep = getAttributesToKeep(context, flowFile);
 
-        final Map<FlowFile, Relationship> flowFileRelationshipMap = new HashMap<>();
+        final Map<FlowFile, Relationship> flowFileRelationshipMap = new LinkedHashMap<>();
         int i = 0;
         for (final Relationship relationship : matchedRelationships) {
             final PropertyValue value = propMap.get(relationship);

@@ -46,8 +46,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -130,7 +130,7 @@ public class AttributesToTypedJSON extends AbstractProcessor {
         properties.add(NULL_VALUE_FOR_EMPTY_STRING);
         this.properties = Collections.unmodifiableList(properties);
 
-        final Set<Relationship> relationships = new HashSet<>();
+        final Set<Relationship> relationships = new LinkedHashSet<>();
         relationships.add(REL_SUCCESS);
         relationships.add(REL_FAILURE);
         this.relationships = Collections.unmodifiableSet(relationships);
@@ -152,10 +152,10 @@ public class AttributesToTypedJSON extends AbstractProcessor {
      * @return Map of values that are feed to a Jackson ObjectMapper
      */
     private Map<String, String> buildAttributesMapForFlowFile(FlowFile ff, String atrList,
-                                                                boolean includeCoreAttributes,
-                                                                boolean nullValForEmptyString) {
+                                                              boolean includeCoreAttributes,
+                                                              boolean nullValForEmptyString) {
 
-        Map<String, String> atsToWrite = new HashMap<>();
+        Map<String, String> atsToWrite = new LinkedHashMap<>();
 
         //If list of attributes specified get only those attributes. Otherwise write them all
         if (StringUtils.isNotBlank(atrList)) {
@@ -220,7 +220,7 @@ public class AttributesToTypedJSON extends AbstractProcessor {
                 context.getProperty(INCLUDE_CORE_ATTRIBUTES).asBoolean(),
                 context.getProperty(NULL_VALUE_FOR_EMPTY_STRING).asBoolean());
 
-        final Map<String, Object> typedList = new HashMap<>();
+        final Map<String, Object> typedList = new LinkedHashMap<>();
 
         try {
             for (Map.Entry<String, String> attribute : atrList.entrySet()) {

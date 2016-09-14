@@ -27,15 +27,17 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 
-public class TestAttributesToNestedJSON {
+public class TestAttributesToTypedJSON {
     private static final String TEST_ATTRIBUTE_KEY = "TestAttribute";
     private static final String TEST_ATTRIBUTE_VALUE = "TestValue";
 
@@ -57,7 +59,7 @@ public class TestAttributesToNestedJSON {
             "  \"favoriteFruit\": \"strawberry\"\n" +
             "}";
 
-    private static final Map<String, String> ATTRIBUTES = new HashMap<String, String>() {{
+    private static final Map<String, String> ATTRIBUTES = new LinkedHashMap<String, String>() {{
         put("_id", "\"57cf1fcc583d8f04fdc04902\"");
         put("index", "0");
         put("name", "{ \"first\": \"Donna\", \"last\": \"Hardin\" }");
@@ -93,8 +95,8 @@ public class TestAttributesToNestedJSON {
         assertEquals(1, flowFiles.size());
 
         for (MockFlowFile file : flowFiles) {
-            Map<String, Object> expected = new ObjectMapper().readValue(TEST_INPUT, HashMap.class);
-            Map<String, Object> result = new ObjectMapper().readValue(new String(file.toByteArray()), HashMap.class);
+            Map<String, Object> expected = new ObjectMapper().readValue(TEST_INPUT, LinkedHashMap.class);
+            Map<String, Object> result = new ObjectMapper().readValue(new String(file.toByteArray()), LinkedHashMap.class);
 
             for (String key : expected.keySet()) {
                 assertEquals(expected.get(key), result.get(key));
@@ -108,6 +110,31 @@ public class TestAttributesToNestedJSON {
                     assertEquals(result.get(coreAttribute.key()), file.getAttributes().get(coreAttribute.key()));
                 }
             }
+        }
+    }
+
+    @Test
+    public void makeSureAttributeListWhenSuppliedOrdersJsonAppropriately() throws Exception {
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+
+        testRunner.setProperty(AttributesToTypedJSON.INCLUDE_CORE_ATTRIBUTES, "false");
+        testRunner.setProperty(AttributesToTypedJSON.DESTINATION, "flowfile-content");
+        testRunner.setProperty(AttributesToTypedJSON.ATTRIBUTES_LIST, "_id,index,name,tags,greeting,favoriteFruit");
+
+        FlowFile flowFile = session.create();
+        flowFile = session.putAllAttributes(flowFile, ATTRIBUTES);
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONKeysToAttributeList.REL_SUCCESS);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(JSONKeysToAttributeList.REL_SUCCESS);
+
+        assertEquals(1, flowFiles.size());
+
+        for (MockFlowFile file : flowFiles) {
+            file.assertContentEquals("{\"_id\":\"57cf1fcc583d8f04fdc04902\",\"index\":0,\"name\":{\"first\":\"Donna\",\"last\":\"Hardin\"},\"tags\":[\"culpa\",\"sunt\",\"reprehenderit\",\"fugiat\",\"velit\"],\"greeting\":\"Hello, Donna! You have 9 unread messages.\",\"favoriteFruit\":\"strawberry\"}");
         }
     }
 
