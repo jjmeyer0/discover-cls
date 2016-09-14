@@ -69,6 +69,7 @@ import java.util.concurrent.atomic.AtomicReference;
         @WritesAttribute(attribute = "RouteAndSplitOnAttribute.Matched.Route", description = "The dynamic attribute that may be a relationship name."),
         @WritesAttribute(attribute = "RouteAndSplitOnAttribute.Matched.Attribute", description = "The attribute matched and routed on."),
         @WritesAttribute(attribute = "RouteAndSplitOnAttribute.Matched.Value", description = "The value of the attribute that was matched and routed on."),
+        @WritesAttribute(attribute = "RouteAndSplitOnAttribute.AttributeFilter", description = "The value of the property 'Attributes to Keep.'"),
         @WritesAttribute(attribute = "original-uuid", description = "If a flow file is cloned, this is the UUID of the flow file that was cloned from."),
 })
 @DynamicRelationship(name = "Name from Dynamic Property", description = "FlowFiles that match the Dynamic Property's Attribute Expression Language")
@@ -76,6 +77,7 @@ public class RouteAndSplitOnAttribute extends AbstractProcessor {
     static final String ROUTE_ATTRIBUTE_NAME = "RouteAndSplitOnAttribute.Matched.Route";
     static final String ROUTE_ATTRIBUTE_MATCHED_KEY = "RouteAndSplitOnAttribute.Matched.Attribute";
     static final String ROUTE_ATTRIBUTE_MATCHED_VALUE = "RouteAndSplitOnAttribute.Matched.Value";
+    static final String ROUTE_ATTRIBUTE_FILTER = "RouteAndSplitOnAttribute.AttributeFilter";
     static final String ORIGINAL_UUID = "original.uuid";
 
     // keep the word 'match' instead of 'matched' to maintain backward compatibility (there was a typo originally)
@@ -284,13 +286,15 @@ public class RouteAndSplitOnAttribute extends AbstractProcessor {
     private Map<FlowFile, Relationship> getFlowFilesToSend(ProcessSession session, ProcessContext context,
                                                            FlowFile flowFile, final Map<Relationship, PropertyValue> propMap,
                                                            final Set<Relationship> matchedRelationships) {
+        final String attributesToKeepValue = context.getProperty(ATTRIBUTES_TO_KEEP).evaluateAttributeExpressions(flowFile).getValue();
+        final Set<String> attributesToMatch = getAttributesToMatch(context, flowFile);
+        final Set<String> attributesToKeep = getAttributesToKeep(context, flowFile);
+
         final Map<FlowFile, Relationship> flowFileRelationshipMap = new HashMap<>();
         int i = 0;
         for (final Relationship relationship : matchedRelationships) {
             final PropertyValue value = propMap.get(relationship);
             final String patternToMatchAgainst = value.evaluateAttributeExpressions(flowFile).getValue();
-            final Set<String> attributesToMatch = getAttributesToMatch(context, flowFile);
-            final Set<String> attributesToKeep = getAttributesToKeep(context, flowFile);
             final List<String> allAttributesToMatch = getMatchedAttributes(patternToMatchAgainst, attributesToMatch);
 
             for (int j = 0; j < allAttributesToMatch.size(); j++) {
@@ -308,6 +312,7 @@ public class RouteAndSplitOnAttribute extends AbstractProcessor {
                 f = session.putAttribute(f, ROUTE_ATTRIBUTE_NAME, relationship.getName());
                 f = session.putAttribute(f, ROUTE_ATTRIBUTE_MATCHED_KEY, attributeKey);
                 f = session.putAttribute(f, ROUTE_ATTRIBUTE_MATCHED_VALUE, attributeValue == null ? "" : attributeValue);
+                f = session.putAttribute(f, ROUTE_ATTRIBUTE_FILTER, attributesToKeepValue == null ? "": attributesToKeepValue);
                 f = session.putAttribute(f, attributeKey, attributeValue == null ? "" : attributeValue);
                 f = session.putAttribute(f, ORIGINAL_UUID, flowFile.getAttribute(CoreAttributes.UUID.key()));
 

@@ -104,6 +104,7 @@ public class TestRouteAndSplitOnAttribute {
                 mockFlowFile.assertAttributeEquals(RouteAndSplitOnAttribute.ROUTE_ATTRIBUTE_MATCHED_VALUE, "v2");
             }
 
+            mockFlowFile.assertAttributeEquals(RouteAndSplitOnAttribute.ROUTE_ATTRIBUTE_FILTER, "k2, k3, k4");
         }
     }
 
@@ -135,6 +136,7 @@ public class TestRouteAndSplitOnAttribute {
             mockFlowFile.assertAttributeEquals("k2", "v2");
             mockFlowFile.assertAttributeEquals("c_ip", "v3");
             mockFlowFile.assertAttributeEquals("d_ip", "v4");
+            mockFlowFile.assertAttributeEquals(RouteAndSplitOnAttribute.ROUTE_ATTRIBUTE_FILTER, "");
         }
     }
 
