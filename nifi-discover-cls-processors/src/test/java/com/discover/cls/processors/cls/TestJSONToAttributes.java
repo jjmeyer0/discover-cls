@@ -87,6 +87,118 @@ public class TestJSONToAttributes {
         testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_SUCCESS);
     }
 
+    @Test(expected = AssertionError.class)
+    public void makeSureFlattenAttributeSeparatorCausesErrorWhenLongerThanACharacter() throws Exception {
+        testRunner.setProperty(JSONToAttributes.FLATTEN_JSON_SEPARATOR, "asd");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.write(flowFile, new OutputStreamCallback() {
+            @Override
+            public void process(OutputStream out) throws IOException {
+                out.write(TEST_INPUT.getBytes());
+            }
+        });
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+    }
+
+    @Test
+    public void makeSureAttributesAreProperlyFlattened() throws Exception {
+        testRunner.setProperty(JSONToAttributes.FLATTEN_JSON, "true");
+        testRunner.setProperty(JSONToAttributes.FLATTEN_JSON_SEPARATOR, "~");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.write(flowFile, new OutputStreamCallback() {
+            @Override
+            public void process(OutputStream out) throws IOException {
+                out.write(TEST_INPUT.getBytes());
+            }
+        });
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_SUCCESS);
+
+        MockFlowFile mf = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_SUCCESS).get(0);
+
+        mf.assertAttributeEquals("name~first", "\"Donna\"");
+        mf.assertAttributeEquals("name~last", "\"Hardin\"");
+        mf.assertAttributeEquals("tags[0]", "\"culpa\"");
+        mf.assertAttributeEquals("tags[1]", "\"sunt\"");
+        mf.assertAttributeEquals("tags[2]", "\"reprehenderit\"");
+        mf.assertAttributeEquals("tags[3]", "\"fugiat\"");
+    }
+
+    @Test
+    public void makeSureFlatteningJSONWorksAsExpectedWithComplexNesting() throws Exception {
+        final String json = "{\n" +
+                "   \"Port\":\n" +
+                "   {\n" +
+                "       \"@alias\": \"defaultHttp\",\n" +
+                "       \"Enabled\": \"true\",\n" +
+                "       \"Number\": \"10092\",\n" +
+                "       \"Protocol\": \"http\",\n" +
+                "       \"KeepAliveTimeout\": \"20000\",\n" +
+                "       \"ThreadPool\":\n" +
+                "       {\n" +
+                "           \"@enabled\": \"false\",\n" +
+                "           \"Max\": \"150\",\n" +
+                "           \"ThreadPriority\": \"5\"\n" +
+                "       },\n" +
+                "       \"ExtendedProperties\":\n" +
+                "       {\n" +
+                "           \"Property\":\n" +
+                "           [                         \n" +
+                "               {\n" +
+                "                   \"@name\": \"connectionTimeout\",\n" +
+                "                   \"$\": \"20000\"\n" +
+                "               },\n" +
+                "               {\n" +
+                "                   \"@name\": \"connectionTimeout\",\n" +
+                "                   \"$\": \"20000\"\n" +
+                "               }\n" +
+                "           ]\n" +
+                "       }\n" +
+                "   }\n" +
+                "}";
+
+        testRunner.setProperty(JSONToAttributes.FLATTEN_JSON, "true");
+        testRunner.setProperty(JSONToAttributes.PRESERVE_TYPE, "false");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.write(flowFile, new OutputStreamCallback() {
+            @Override
+            public void process(OutputStream out) throws IOException {
+                out.write(json.getBytes());
+            }
+        });
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_SUCCESS);
+
+        MockFlowFile mf = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_SUCCESS).get(0);
+
+        mf.assertAttributeEquals("Port.@alias", "defaultHttp");
+        mf.assertAttributeEquals("Port.Enabled", "true");
+        mf.assertAttributeEquals("Port.Number", "10092");
+        mf.assertAttributeEquals("Port.Protocol", "http");
+        mf.assertAttributeEquals("Port.KeepAliveTimeout", "20000");
+        mf.assertAttributeEquals("Port.ThreadPool.@enabled", "false");
+        mf.assertAttributeEquals("Port.ThreadPool.Max", "150");
+        mf.assertAttributeEquals("Port.ThreadPool.ThreadPriority", "5");
+        mf.assertAttributeEquals("Port.ExtendedProperties.Property[0].@name", "connectionTimeout");
+        mf.assertAttributeEquals("Port.ExtendedProperties.Property[0].$", "20000");
+        mf.assertAttributeEquals("Port.ExtendedProperties.Property[1].@name", "connectionTimeout");
+        mf.assertAttributeEquals("Port.ExtendedProperties.Property[1].$", "20000");
+    }
+
     @Test
     public void verifyMalformedJsonGoesToFailureRelationship() throws Exception {
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
@@ -147,7 +259,9 @@ public class TestJSONToAttributes {
         assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.OVERRIDE_ATTRIBUTES));
         assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.PRESERVE_TYPE));
         assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.JSON_ATTRIBUTE_NAME));
-        assertEquals(3, supportedPropertyDescriptors.size());
+        assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.FLATTEN_JSON));
+        assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.FLATTEN_JSON_SEPARATOR));
+        assertEquals(5, supportedPropertyDescriptors.size());
     }
 
     @Test

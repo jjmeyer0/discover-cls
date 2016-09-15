@@ -18,6 +18,9 @@ package com.discover.cls.processors.cls;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.ValueNode;
 import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.behavior.ReadsAttribute;
 import org.apache.nifi.annotation.behavior.ReadsAttributes;
@@ -44,6 +47,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 
 @Tags({"json", "attributes", "flowfile"})
@@ -95,6 +99,26 @@ public class JSONToAttributes extends AbstractProcessor {
             .expressionLanguageSupported(true)
             .build();
 
+    static final PropertyDescriptor FLATTEN_JSON = new PropertyDescriptor.Builder()
+            .name("Flatten JSON")
+            .displayName("Flatten JSON")
+            .description("This determines whether or not to flatten the JSON.")
+            .defaultValue("false")
+            .allowableValues("true", "false")
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .required(true)
+            .build();
+
+    static final PropertyDescriptor FLATTEN_JSON_SEPARATOR = new PropertyDescriptor.Builder()
+            .name("Flatten JSON Separator")
+            .displayName("Flatten JSON Separator")
+            .description("When flattening JSON this will be used as the separator when creating attribute names.")
+            .defaultValue(".")
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .addValidator(StandardValidators.createRegexMatchingValidator(Pattern.compile(".")))
+            .required(true)
+            .build();
+
     static final Relationship REL_SUCCESS = new Relationship.Builder()
             .name("success")
             .description("Successfully converted JSON to attributes.")
@@ -112,7 +136,7 @@ public class JSONToAttributes extends AbstractProcessor {
 
 
     private static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE, REL_NO_CONTENT)));
-    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(OVERRIDE_ATTRIBUTES, PRESERVE_TYPE, JSON_ATTRIBUTE_NAME));
+    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(OVERRIDE_ATTRIBUTES, PRESERVE_TYPE, JSON_ATTRIBUTE_NAME, FLATTEN_JSON, FLATTEN_JSON_SEPARATOR));
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -133,6 +157,8 @@ public class JSONToAttributes extends AbstractProcessor {
             return;
         }
 
+        final String flattenJsonSeparator = context.getProperty(FLATTEN_JSON_SEPARATOR).getValue();
+        final boolean flattenJson = context.getProperty(FLATTEN_JSON).asBoolean();
         final String attributeNameFromProperty = context.getProperty(JSON_ATTRIBUTE_NAME).evaluateAttributeExpressions().getValue();
         final String attributeContent = flowFile.getAttribute(attributeNameFromProperty);
         final byte[] content = getContent(session, flowFile, attributeNameFromProperty, attributeContent);
@@ -155,40 +181,44 @@ public class JSONToAttributes extends AbstractProcessor {
         try {
             final JsonNode jsonNode = OBJECT_MAPPER.readTree(content);
             final Map<String, String> attributes = new LinkedHashMap<>();
-            final Iterator<Map.Entry<String, JsonNode>> fields = jsonNode.fields();
 
-            while (fields.hasNext()) {
-                Map.Entry<String, JsonNode> entry = fields.next();
-                if (toOverride || flowFile.getAttribute(entry.getKey()) == null) {
-                    JsonNode value = entry.getValue();
-                    switch (value.getNodeType()) {
-                        case ARRAY:
-                            attributes.put(entry.getKey(), value.toString());
-                            break;
-                        case BINARY:
-                            attributes.put(entry.getKey(), value.toString());
-                            break;
-                        case BOOLEAN:
-                            attributes.put(entry.getKey(), Boolean.toString(value.asBoolean()));
-                            break;
-                        case MISSING:
-                            attributes.put(entry.getKey(), value.toString());
-                            break;
-                        case NULL:
-                            attributes.put(entry.getKey(), value.toString());
-                            break;
-                        case NUMBER:
-                            attributes.put(entry.getKey(), Long.toString(value.asLong()));
-                            break;
-                        case OBJECT:
-                            attributes.put(entry.getKey(), value.toString());
-                            break;
-                        case POJO:
-                            attributes.put(entry.getKey(), value.toString());
-                            break;
-                        case STRING:
-                            attributes.put(entry.getKey(), preserveType ? value.toString() : value.textValue());
-                            break;
+            if (flattenJson) {
+                addKeys("", jsonNode, flattenJsonSeparator, preserveType, attributes);
+            } else {
+                final Iterator<Map.Entry<String, JsonNode>> fields = jsonNode.fields();
+                while (fields.hasNext()) {
+                    Map.Entry<String, JsonNode> entry = fields.next();
+                    if (toOverride || flowFile.getAttribute(entry.getKey()) == null) {
+                        JsonNode value = entry.getValue();
+                        switch (value.getNodeType()) {
+                            case ARRAY:
+                                attributes.put(entry.getKey(), value.toString());
+                                break;
+                            case BINARY:
+                                attributes.put(entry.getKey(), value.toString());
+                                break;
+                            case BOOLEAN:
+                                attributes.put(entry.getKey(), Boolean.toString(value.asBoolean()));
+                                break;
+                            case MISSING:
+                                attributes.put(entry.getKey(), value.toString());
+                                break;
+                            case NULL:
+                                attributes.put(entry.getKey(), value.toString());
+                                break;
+                            case NUMBER:
+                                attributes.put(entry.getKey(), Long.toString(value.asLong()));
+                                break;
+                            case OBJECT:
+                                attributes.put(entry.getKey(), value.toString());
+                                break;
+                            case POJO:
+                                attributes.put(entry.getKey(), value.toString());
+                                break;
+                            case STRING:
+                                attributes.put(entry.getKey(), preserveType ? value.toString() : value.textValue());
+                                break;
+                        }
                     }
                 }
             }
@@ -207,6 +237,28 @@ public class JSONToAttributes extends AbstractProcessor {
             return FlowFileUtils.extractMessage(flowFile, session);
         } else {
             return attributeContent == null ? new byte[0] : attributeContent.getBytes();
+        }
+    }
+
+    // http://stackoverflow.com/questions/20355261/how-to-deserialize-json-into-flat-map-like-structure
+    private void addKeys(final String currentPath, final JsonNode jsonNode, final String separator, final boolean preserveType, final Map<String, String> map) {
+        if (jsonNode.isObject()) {
+            ObjectNode objectNode = (ObjectNode) jsonNode;
+            Iterator<Map.Entry<String, JsonNode>> iter = objectNode.fields();
+            String pathPrefix = currentPath.isEmpty() ? "" : currentPath + separator;
+
+            while (iter.hasNext()) {
+                Map.Entry<String, JsonNode> entry = iter.next();
+                addKeys(pathPrefix + entry.getKey(), entry.getValue(), separator, preserveType, map);
+            }
+        } else if (jsonNode.isArray()) {
+            ArrayNode arrayNode = (ArrayNode) jsonNode;
+            for (int i = 0; i < arrayNode.size(); i++) {
+                addKeys(currentPath + "[" + i + "]", arrayNode.get(i), separator, preserveType, map);
+            }
+        } else if (jsonNode.isValueNode()) {
+            ValueNode valueNode = (ValueNode) jsonNode;
+            map.put(currentPath, valueNode.isTextual() && preserveType ? valueNode.toString() : valueNode.textValue());
         }
     }
 }
