@@ -24,6 +24,7 @@ import org.apache.nifi.processor.io.OutputStreamCallback;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -43,6 +44,11 @@ public class TestJSONKeysToAttributeList {
     @Before
     public void init() {
         testRunner = TestRunners.newTestRunner(JSONKeysToAttributeList.class);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        testRunner.shutdown();
     }
 
     @Test(expected = AssertionError.class)

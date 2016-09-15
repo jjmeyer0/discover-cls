@@ -17,19 +17,26 @@
 package com.discover.cls.processors.cls;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.ProcessSession;
+import org.apache.nifi.processor.Relationship;
+import org.apache.nifi.processor.io.OutputStreamCallback;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -72,6 +79,29 @@ public class TestAttributesToTypedJSON {
     @Before
     public void init() {
         testRunner = TestRunners.newTestRunner(AttributesToTypedJSON.class);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        testRunner.shutdown();
+    }
+
+    @Test
+    public void makeSureGetRelationshipOnlyContainsProperRelationships() throws Exception {
+        Set<Relationship> relationships = new AttributesToTypedJSON().getRelationships();
+        assertTrue(relationships.contains(AttributesToTypedJSON.REL_FAILURE));
+        assertTrue(relationships.contains(AttributesToTypedJSON.REL_SUCCESS));
+        assertEquals(2, relationships.size());
+    }
+
+    @Test
+    public void makeSurePropertyDescriptorsAreProperlySetup() throws Exception {
+        List<PropertyDescriptor> supportedPropertyDescriptors = new AttributesToTypedJSON().getSupportedPropertyDescriptors();
+        assertTrue(supportedPropertyDescriptors.contains(AttributesToTypedJSON.ATTRIBUTES_LIST));
+        assertTrue(supportedPropertyDescriptors.contains(AttributesToTypedJSON.DESTINATION));
+        assertTrue(supportedPropertyDescriptors.contains(AttributesToTypedJSON.INCLUDE_CORE_ATTRIBUTES));
+        assertTrue(supportedPropertyDescriptors.contains(AttributesToTypedJSON.NULL_VALUE_FOR_EMPTY_STRING));
+        assertEquals(4, supportedPropertyDescriptors.size());
     }
 
     @Test

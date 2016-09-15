@@ -34,7 +34,6 @@ import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.AbstractProcessor;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
-import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.io.StreamCallback;
@@ -44,7 +43,7 @@ import org.apache.nifi.stream.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -108,33 +107,18 @@ public class AttributesToTypedJSON extends AbstractProcessor {
             .description("Failed to convert attributes to JSON").build();
     private static final String AT_LIST_SEPARATOR = ",";
     private static final String APPLICATION_JSON = "application/json";
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-    private List<PropertyDescriptor> properties;
-    private Set<Relationship> relationships;
-
-    @Override
-    protected void init(final ProcessorInitializationContext context) {
-        final List<PropertyDescriptor> properties = new ArrayList<>();
-        properties.add(ATTRIBUTES_LIST);
-        properties.add(DESTINATION);
-        properties.add(INCLUDE_CORE_ATTRIBUTES);
-        properties.add(NULL_VALUE_FOR_EMPTY_STRING);
-        this.properties = Collections.unmodifiableList(properties);
-
-        final Set<Relationship> relationships = new HashSet<>();
-        relationships.add(REL_SUCCESS);
-        relationships.add(REL_FAILURE);
-        this.relationships = Collections.unmodifiableSet(relationships);
-    }
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final List<PropertyDescriptor> PROPERTIES = Collections.unmodifiableList(Arrays.asList(ATTRIBUTES_LIST, DESTINATION, INCLUDE_CORE_ATTRIBUTES, NULL_VALUE_FOR_EMPTY_STRING));
+    private static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE)));
 
     @Override
     protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
-        return properties;
+        return PROPERTIES;
     }
 
     @Override
     public Set<Relationship> getRelationships() {
-        return relationships;
+        return RELATIONSHIPS;
     }
 
     /**
@@ -220,8 +204,8 @@ public class AttributesToTypedJSON extends AbstractProcessor {
                 } else {
                     try {
                         if (attribute.getValue() != null) {
-                            JsonNode node = objectMapper.readTree(attribute.getValue().getBytes());
-                            Object o = objectMapper.treeToValue(node, Object.class);
+                            JsonNode node = OBJECT_MAPPER.readTree(attribute.getValue().getBytes());
+                            Object o = OBJECT_MAPPER.treeToValue(node, Object.class);
                             typedList.put(attribute.getKey(), o);
                         } else {
                             typedList.put(attribute.getKey(), null);
@@ -236,7 +220,7 @@ public class AttributesToTypedJSON extends AbstractProcessor {
             switch (context.getProperty(DESTINATION).getValue()) {
                 case DESTINATION_ATTRIBUTE:
                     FlowFile atFlowfile = session.putAttribute(original, JSON_ATTRIBUTE_NAME,
-                            objectMapper.writeValueAsString(typedList));
+                            OBJECT_MAPPER.writeValueAsString(typedList));
                     session.transfer(atFlowfile, REL_SUCCESS);
                     break;
                 case DESTINATION_CONTENT:
@@ -244,7 +228,7 @@ public class AttributesToTypedJSON extends AbstractProcessor {
                         @Override
                         public void process(InputStream in, OutputStream out) throws IOException {
                             try (OutputStream outputStream = new BufferedOutputStream(out)) {
-                                outputStream.write(objectMapper.writeValueAsBytes(typedList));
+                                outputStream.write(OBJECT_MAPPER.writeValueAsBytes(typedList));
                             }
                         }
                     });

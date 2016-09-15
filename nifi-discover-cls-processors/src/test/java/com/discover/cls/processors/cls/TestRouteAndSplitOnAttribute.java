@@ -19,8 +19,10 @@ package com.discover.cls.processors.cls;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.util.MockFlowFile;
+import org.apache.nifi.util.MockProcessSession;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -35,6 +37,11 @@ public class TestRouteAndSplitOnAttribute {
     @Before
     public void init() {
         testRunner = TestRunners.newTestRunner(RouteAndSplitOnAttribute.class);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        testRunner.shutdown();
     }
 
     @Test
@@ -283,6 +290,26 @@ public class TestRouteAndSplitOnAttribute {
 
         testRunner.assertTransferCount(RouteAndSplitOnAttribute.REL_MATCH, 0);
         testRunner.assertTransferCount(RouteAndSplitOnAttribute.REL_NO_MATCH, 1);
+    }
 
+    @Test
+    public void routeAnyMatchesValueWithNoMatchesShouldSendToNoMatchRelationship() throws Exception {
+        testRunner.setProperty(RouteAndSplitOnAttribute.ROUTE_STRATEGY, RouteAndSplitOnAttribute.ROUTE_ANY_MATCHES);
+        testRunner.setProperty(RouteAndSplitOnAttribute.ATTRIBUTE_LIST_TO_MATCH, "a,k2,c,k3");
+        testRunner.setProperty("match.ip", ".*_ip");
+        testRunner.setProperty("test", "test");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+
+        flowFile = session.putAttribute(flowFile, "b", "v1");
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertTransferCount(RouteAndSplitOnAttribute.REL_MATCH, 0);
+        testRunner.assertTransferCount(RouteAndSplitOnAttribute.REL_NO_MATCH, 1);
+
+        testRunner.assertQueueEmpty();
     }
 }
