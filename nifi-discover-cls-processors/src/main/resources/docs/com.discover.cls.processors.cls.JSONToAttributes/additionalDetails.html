@@ -24,20 +24,92 @@
 <body>
 <h2>Usage Example</h2>
 <p>
-<!-- TODO: description -->
+    This processor will take a JSON string from either a define attribute or the flow file's content. It will convert each of the top level keys to attributes flow file
+    attributes. This processor will read the JSON from the attribute defined in property descriptor named 'JSON Attribute Name.' If this is not defined then the content will be read.
+    Be aware if if 'JSON Attribute Name' has a value then the content of the flow file will not be looked at. If 'Preserverve JSON Type' is true then each attribute value created will
+    be a valid JSON. For example, if a JSON string, '{"key1":"val1","key2":0}', is converted to attributes, the following attributes and their values would be created: key1 with
+    value "val1" and key2 with value 0. Notice the quotes. This is done because each of the values generated from this processor must be valid JSON. However, this functionality is
+    configurable. This is the default behavior. If this is not desired then switch the property 'Preserve JSON Type' to false. This will then output string values without the outer
+    double quotes. Lastly, this processor has the capability of flattening the json it will parse. It will use the 'Flatten JSON Separator' property to concatenate different levels
+    of the JSON producing a flat map.
 </p>
 <p>
-    Example: The goal is to route all files with attributes that end with '_ip' to a 'matched.ip' relationship.
-    Add a property with the following name and value:
+    Example: The goal is to take the JSON content and flatten into a single level flat map. We also want to override any attributes that may exist on the flow file (uuid will never be overwritten).
 </p>
 <ul>
-    <li><strong>property name</strong>: matched.ip
+    <li><strong>property name</strong>: Override Attributes
     </li>
-    <li><strong>property value</strong>: .*_ip
+    <li><strong>property value</strong>: true
+    </li>
+    <li><strong>property name</strong>: Preserve JSON Type
+    </li>
+    <li><strong>property value</strong>: false
+    </li>
+    <li><strong>property name</strong>: Flatten JSON
+    </li>
+    <li><strong>property value</strong>: true
+    </li>
+    <li><strong>property name</strong>: Flatten JSON Arrays
+    </li>
+    <li><strong>property value</strong>: true
+    </li>
+    <li><strong>property name</strong>: Flatten JSON Separator
+    </li>
+    <li><strong>property value</strong>: .
     </li>
 </ul>
 <p>
-    In this example, all files with attributes that end with '_ip' will follow the 'matched.ip' relationship.
+    In this example, we send the following JSON as the input:
+
+<pre>
+<code>
+{
+    "Port": {
+        "@alias": "defaultHttp",
+        "Enabled": "true",
+        "Number": "10092",
+        "Protocol": "http",
+        "KeepAliveTimeout": "20000",
+        "ThreadPool": {
+            "@enabled": "false",
+            "Max": "150",
+            "ThreadPriority": "5"
+        },
+        "ExtendedProperties": {
+            "Property": [
+                {
+                    "@name": "connectionTimeout",
+                    "$": "20000"
+                },
+                {
+                    "@name": "connectionTimeout",
+                    "$": "20000"
+                }
+            ]
+        }
+    }
+}
+</code>
+</pre>
+
+    The expected output would be the following flow file attribute/value pairs:
+
+<pre>
+<code>
+Port.@alias, defaultHttp
+Port.Enabled, true
+Port.Number, 10092
+Port.Protocol, http
+Port.KeepAliveTimeout, 20000
+Port.ThreadPool.@enabled, false
+Port.ThreadPool.Max, 150
+Port.ThreadPool.ThreadPriority, 5
+Port.ExtendedProperties.Property[0].@name, connectionTimeout
+Port.ExtendedProperties.Property[0].$, 20000
+Port.ExtendedProperties.Property[1].@name, connectionTimeout
+Port.ExtendedProperties.Property[1].$, 20000
+</code>
+</pre>
 </p>
 </body>
 </html>
