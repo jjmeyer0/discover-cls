@@ -9,10 +9,11 @@
 2. Run the following commands to package NiFi processors
 
 ```bash
-mvn clean package
+mvn clean package -P <jdk7 or jdk8>
 ```
 
-3. Move custom nar to NiFi lib directory. The lib directories are configured in nifi.properties. By default there is nifi.nar.library.directory property. 
+4. Note the profile. If you are running NiFi w/ Java 7 use jd7 profile otherwise it is preferred to use the jdk8 profile.
+5. Move custom nar to NiFi lib directory. The lib directories are configured in nifi.properties. By default there is nifi.nar.library.directory property. 
 By default there is a lib directory where NiFi is installed.
 
 ```bash
