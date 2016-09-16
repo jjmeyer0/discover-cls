@@ -26,7 +26,7 @@
 <p>
     This processor will take a JSON string from either a define attribute or the flow file's content. It will convert each of the top level keys to attributes flow file
     attributes. This processor will read the JSON from the attribute defined in property descriptor named 'JSON Attribute Name.' If this is not defined then the content will be read.
-    Be aware if if 'JSON Attribute Name' has a value then the content of the flow file will not be looked at. If 'Preserverve JSON Type' is true then each attribute value created will
+    Be aware if if 'JSON Attribute Name' has a value then the content of the flow file will not be looked at. If 'Preserve JSON Type' is true then each attribute value created will
     be a valid JSON. For example, if a JSON string, '{"key1":"val1","key2":0}', is converted to attributes, the following attributes and their values would be created: key1 with
     value "val1" and key2 with value 0. Notice the quotes. This is done because each of the values generated from this processor must be valid JSON. However, this functionality is
     configurable. This is the default behavior. If this is not desired then switch the property 'Preserve JSON Type' to false. This will then output string values without the outer

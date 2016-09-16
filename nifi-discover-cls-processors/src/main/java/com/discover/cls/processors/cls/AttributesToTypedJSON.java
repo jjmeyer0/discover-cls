@@ -226,7 +226,7 @@ public class AttributesToTypedJSON extends AbstractProcessor {
                     session.transfer(atFlowfile, REL_SUCCESS);
                     break;
                 case DESTINATION_CONTENT:
-                    FlowFile conFlowfile = session.write(original, new StreamCallback() {
+                    FlowFile conFlowFile = session.write(original, new StreamCallback() {
                         @Override
                         public void process(InputStream in, OutputStream out) throws IOException {
                             try (OutputStream outputStream = new BufferedOutputStream(out)) {
@@ -234,8 +234,8 @@ public class AttributesToTypedJSON extends AbstractProcessor {
                             }
                         }
                     });
-                    conFlowfile = session.putAttribute(conFlowfile, CoreAttributes.MIME_TYPE.key(), APPLICATION_JSON);
-                    session.transfer(conFlowfile, REL_SUCCESS);
+                    conFlowFile = session.putAttribute(conFlowFile, CoreAttributes.MIME_TYPE.key(), APPLICATION_JSON);
+                    session.transfer(conFlowFile, REL_SUCCESS);
                     break;
             }
         } catch (IOException e) {
