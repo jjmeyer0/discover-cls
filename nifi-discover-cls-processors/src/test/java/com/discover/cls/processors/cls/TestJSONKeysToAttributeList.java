@@ -152,7 +152,7 @@ public class TestJSONKeysToAttributeList {
     @Test
     public void makeSureProcessorProperlyReadsFromAttributeInsteadOfContent() throws Exception {
         testRunner.setProperty(JSONKeysToAttributeList.ATTRIBUTE_LIST_SEPARATOR, "|");
-        testRunner.setProperty(JSONKeysToAttributeList.JSON_ATTRIBUTE, "json-value");
+        testRunner.setProperty(JSONKeysToAttributeList.JSON_ATTRIBUTE, "JSON_TEST-value");
 
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
         FlowFile flowFile = session.create();
@@ -163,7 +163,7 @@ public class TestJSONKeysToAttributeList {
             }
         });
 
-        flowFile = session.putAttribute(flowFile, "json-value", "{\"k6\":\"v6\"}");
+        flowFile = session.putAttribute(flowFile, "JSON_TEST-value", "{\"k6\":\"v6\"}");
 
         testRunner.enqueue(flowFile);
         testRunner.run();
@@ -182,7 +182,7 @@ public class TestJSONKeysToAttributeList {
     @Test
     public void makeSureNothingIsReturnedIfTopLevelJsonIsAnArray() throws Exception {
         testRunner.setProperty(JSONKeysToAttributeList.ATTRIBUTE_LIST_SEPARATOR, "|");
-        testRunner.setProperty(JSONKeysToAttributeList.JSON_ATTRIBUTE, "json-value");
+        testRunner.setProperty(JSONKeysToAttributeList.JSON_ATTRIBUTE, "JSON_TEST-value");
 
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
         FlowFile flowFile = session.create();
@@ -193,7 +193,7 @@ public class TestJSONKeysToAttributeList {
             }
         });
 
-        flowFile = session.putAttribute(flowFile, "json-value", "[\"k6\",\"v6\"]");
+        flowFile = session.putAttribute(flowFile, "JSON_TEST-value", "[\"k6\",\"v6\"]");
 
         testRunner.enqueue(flowFile);
         testRunner.run();
@@ -212,7 +212,7 @@ public class TestJSONKeysToAttributeList {
     @Test
     public void makeSureEmptyContentIsProperlyHandled() throws Exception {
         testRunner.setProperty(JSONKeysToAttributeList.ATTRIBUTE_LIST_SEPARATOR, "|");
-        testRunner.setProperty(JSONKeysToAttributeList.JSON_ATTRIBUTE, "json-value");
+        testRunner.setProperty(JSONKeysToAttributeList.JSON_ATTRIBUTE, "JSON_TEST-value");
 
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
         FlowFile flowFile = session.create();
@@ -223,7 +223,7 @@ public class TestJSONKeysToAttributeList {
             }
         });
 
-        flowFile = session.putAttribute(flowFile, "json-value", "");
+        flowFile = session.putAttribute(flowFile, "JSON_TEST-value", "");
 
         testRunner.enqueue(flowFile);
         testRunner.run();

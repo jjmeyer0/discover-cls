@@ -58,7 +58,8 @@ import java.util.regex.Pattern;
         "be a valid JSON. For example, if a JSON string, '{\"key1\":\"val1\",\"key2\":0}', is converted to attributes, the following attributes and their values would be created: key1 with " +
         "value \"val1\" and key2 with value 0. Notice the quotes. This is done because each of the values generated from this processor must be valid JSON. However, this functionality is " +
         "configurable. This is the default behavior. If this is not desired then switch the property 'Preserve JSON Type' to false. This will then output string values without the outer " +
-        "double quotes.")
+        "double quotes. Lastly, this processor has the capability of flattening the json it will parse. It will use the 'Flatten JSON Separator' property to concatenate different levels " +
+        "of the JSON producing a flat map.")
 @SeeAlso({AttributesToTypedJSON.class, JSONToAttributes.class, JSONKeysToAttributeList.class})
 @ReadsAttributes({
         @ReadsAttribute(attribute = "X", description = "The name of the attribute to get the JSON data from. This is optional. X is defined in property descriptor JSON Attribute Name.")
@@ -109,10 +110,20 @@ public class JSONToAttributes extends AbstractProcessor {
             .required(true)
             .build();
 
+    static final PropertyDescriptor FLATTEN_JSON_ARRAYS = new PropertyDescriptor.Builder()
+            .name("Flatten JSON Arrays")
+            .displayName("Flatten JSON Arrays")
+            .description("If true, when flattening JSON in will also flatten arrays; otherwise arrays are stored like values.")
+            .defaultValue("false")
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .allowableValues("true", "false")
+            .required(true)
+            .build();
+
     static final PropertyDescriptor FLATTEN_JSON_SEPARATOR = new PropertyDescriptor.Builder()
             .name("Flatten JSON Separator")
             .displayName("Flatten JSON Separator")
-            .description("When flattening JSON this will be used as the separator when creating attribute names.")
+            .description("When flattening JSON this will be used as the separator when creating attribute names. Must only be a single character.")
             .defaultValue(".")
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .addValidator(StandardValidators.createRegexMatchingValidator(Pattern.compile(".")))
@@ -136,7 +147,7 @@ public class JSONToAttributes extends AbstractProcessor {
 
 
     private static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE, REL_NO_CONTENT)));
-    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(OVERRIDE_ATTRIBUTES, PRESERVE_TYPE, JSON_ATTRIBUTE_NAME, FLATTEN_JSON, FLATTEN_JSON_SEPARATOR));
+    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(OVERRIDE_ATTRIBUTES, PRESERVE_TYPE, JSON_ATTRIBUTE_NAME, FLATTEN_JSON, FLATTEN_JSON_ARRAYS, FLATTEN_JSON_SEPARATOR));
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -159,6 +170,7 @@ public class JSONToAttributes extends AbstractProcessor {
 
         final String flattenJsonSeparator = context.getProperty(FLATTEN_JSON_SEPARATOR).getValue();
         final boolean flattenJson = context.getProperty(FLATTEN_JSON).asBoolean();
+        final boolean flattenJsonArrays = context.getProperty(FLATTEN_JSON_ARRAYS).asBoolean();
         final String attributeNameFromProperty = context.getProperty(JSON_ATTRIBUTE_NAME).evaluateAttributeExpressions().getValue();
         final String attributeContent = flowFile.getAttribute(attributeNameFromProperty);
         final byte[] content = getContent(session, flowFile, attributeNameFromProperty, attributeContent);
@@ -183,7 +195,7 @@ public class JSONToAttributes extends AbstractProcessor {
             final Map<String, String> attributes = new LinkedHashMap<>();
 
             if (flattenJson) {
-                addKeys("", jsonNode, flattenJsonSeparator, preserveType, attributes);
+                addKeys("", jsonNode, flattenJsonSeparator, preserveType, flattenJsonArrays, attributes);
             } else {
                 final Iterator<Map.Entry<String, JsonNode>> fields = jsonNode.fields();
                 while (fields.hasNext()) {
@@ -241,7 +253,8 @@ public class JSONToAttributes extends AbstractProcessor {
     }
 
     // http://stackoverflow.com/questions/20355261/how-to-deserialize-json-into-flat-map-like-structure
-    private void addKeys(final String currentPath, final JsonNode jsonNode, final String separator, final boolean preserveType, final Map<String, String> map) {
+    private void addKeys(final String currentPath, final JsonNode jsonNode, final String separator, final boolean preserveType,
+                         final boolean flattenArrays, final Map<String, String> map) {
         if (jsonNode.isObject()) {
             ObjectNode objectNode = (ObjectNode) jsonNode;
             Iterator<Map.Entry<String, JsonNode>> iter = objectNode.fields();
@@ -249,12 +262,16 @@ public class JSONToAttributes extends AbstractProcessor {
 
             while (iter.hasNext()) {
                 Map.Entry<String, JsonNode> entry = iter.next();
-                addKeys(pathPrefix + entry.getKey(), entry.getValue(), separator, preserveType, map);
+                addKeys(pathPrefix + entry.getKey(), entry.getValue(), separator, preserveType, flattenArrays, map);
             }
         } else if (jsonNode.isArray()) {
-            ArrayNode arrayNode = (ArrayNode) jsonNode;
-            for (int i = 0; i < arrayNode.size(); i++) {
-                addKeys(currentPath + "[" + i + "]", arrayNode.get(i), separator, preserveType, map);
+            if (flattenArrays) {
+                ArrayNode arrayNode = (ArrayNode) jsonNode;
+                for (int i = 0; i < arrayNode.size(); i++) {
+                    addKeys(currentPath + "[" + i + "]", arrayNode.get(i), separator, preserveType, flattenArrays, map);
+                }
+            } else {
+                map.put(currentPath, jsonNode.toString());
             }
         } else if (jsonNode.isValueNode()) {
             ValueNode valueNode = (ValueNode) jsonNode;

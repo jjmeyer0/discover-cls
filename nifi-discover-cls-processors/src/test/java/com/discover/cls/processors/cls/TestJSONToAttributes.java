@@ -58,6 +58,37 @@ public class TestJSONToAttributes {
             "  \"favoriteFruit\": \"strawberry\"\n" +
             "}";
 
+    static final String JSON_TEST = "{\n" +
+            "   \"Port\":\n" +
+            "   {\n" +
+            "       \"@alias\": \"defaultHttp\",\n" +
+            "       \"Enabled\": \"true\",\n" +
+            "       \"Number\": \"10092\",\n" +
+            "       \"Protocol\": \"http\",\n" +
+            "       \"KeepAliveTimeout\": \"20000\",\n" +
+            "       \"ThreadPool\":\n" +
+            "       {\n" +
+            "           \"@enabled\": \"false\",\n" +
+            "           \"Max\": \"150\",\n" +
+            "           \"ThreadPriority\": \"5\"\n" +
+            "       },\n" +
+            "       \"ExtendedProperties\":\n" +
+            "       {\n" +
+            "           \"Property\":\n" +
+            "           [                         \n" +
+            "               {\n" +
+            "                   \"@name\": \"connectionTimeout\",\n" +
+            "                   \"$\": \"20000\"\n" +
+            "               },\n" +
+            "               {\n" +
+            "                   \"@name\": \"connectionTimeout\",\n" +
+            "                   \"$\": \"20000\"\n" +
+            "               }\n" +
+            "           ]\n" +
+            "       }\n" +
+            "   }\n" +
+            "}";
+
     private TestRunner testRunner;
 
     @Before
@@ -107,6 +138,7 @@ public class TestJSONToAttributes {
     @Test
     public void makeSureAttributesAreProperlyFlattened() throws Exception {
         testRunner.setProperty(JSONToAttributes.FLATTEN_JSON, "true");
+        testRunner.setProperty(JSONToAttributes.FLATTEN_JSON_ARRAYS, "true");
         testRunner.setProperty(JSONToAttributes.FLATTEN_JSON_SEPARATOR, "~");
 
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
@@ -134,38 +166,7 @@ public class TestJSONToAttributes {
     }
 
     @Test
-    public void makeSureFlatteningJSONWorksAsExpectedWithComplexNesting() throws Exception {
-        final String json = "{\n" +
-                "   \"Port\":\n" +
-                "   {\n" +
-                "       \"@alias\": \"defaultHttp\",\n" +
-                "       \"Enabled\": \"true\",\n" +
-                "       \"Number\": \"10092\",\n" +
-                "       \"Protocol\": \"http\",\n" +
-                "       \"KeepAliveTimeout\": \"20000\",\n" +
-                "       \"ThreadPool\":\n" +
-                "       {\n" +
-                "           \"@enabled\": \"false\",\n" +
-                "           \"Max\": \"150\",\n" +
-                "           \"ThreadPriority\": \"5\"\n" +
-                "       },\n" +
-                "       \"ExtendedProperties\":\n" +
-                "       {\n" +
-                "           \"Property\":\n" +
-                "           [                         \n" +
-                "               {\n" +
-                "                   \"@name\": \"connectionTimeout\",\n" +
-                "                   \"$\": \"20000\"\n" +
-                "               },\n" +
-                "               {\n" +
-                "                   \"@name\": \"connectionTimeout\",\n" +
-                "                   \"$\": \"20000\"\n" +
-                "               }\n" +
-                "           ]\n" +
-                "       }\n" +
-                "   }\n" +
-                "}";
-
+    public void makeSureFlatteningJSONWorksAsExpectedWithComplexNestingWithArraysDisabled() throws Exception {
         testRunner.setProperty(JSONToAttributes.FLATTEN_JSON, "true");
         testRunner.setProperty(JSONToAttributes.PRESERVE_TYPE, "false");
 
@@ -174,7 +175,40 @@ public class TestJSONToAttributes {
         flowFile = session.write(flowFile, new OutputStreamCallback() {
             @Override
             public void process(OutputStream out) throws IOException {
-                out.write(json.getBytes());
+                out.write(JSON_TEST.getBytes());
+            }
+        });
+
+        testRunner.enqueue(flowFile);
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(JSONToAttributes.REL_SUCCESS);
+
+        MockFlowFile mf = testRunner.getFlowFilesForRelationship(JSONToAttributes.REL_SUCCESS).get(0);
+
+        mf.assertAttributeEquals("Port.@alias", "defaultHttp");
+        mf.assertAttributeEquals("Port.Enabled", "true");
+        mf.assertAttributeEquals("Port.Number", "10092");
+        mf.assertAttributeEquals("Port.Protocol", "http");
+        mf.assertAttributeEquals("Port.KeepAliveTimeout", "20000");
+        mf.assertAttributeEquals("Port.ThreadPool.@enabled", "false");
+        mf.assertAttributeEquals("Port.ThreadPool.Max", "150");
+        mf.assertAttributeEquals("Port.ThreadPool.ThreadPriority", "5");
+        mf.assertAttributeEquals("Port.ExtendedProperties.Property", "[{\"@name\":\"connectionTimeout\",\"$\":\"20000\"},{\"@name\":\"connectionTimeout\",\"$\":\"20000\"}]");
+    }
+
+    @Test
+    public void makeSureFlatteningJSONWorksAsExpectedWithComplexNesting() throws Exception {
+        testRunner.setProperty(JSONToAttributes.FLATTEN_JSON, "true");
+        testRunner.setProperty(JSONToAttributes.FLATTEN_JSON_ARRAYS, "true");
+        testRunner.setProperty(JSONToAttributes.PRESERVE_TYPE, "false");
+
+        ProcessSession session = testRunner.getProcessSessionFactory().createSession();
+        FlowFile flowFile = session.create();
+        flowFile = session.write(flowFile, new OutputStreamCallback() {
+            @Override
+            public void process(OutputStream out) throws IOException {
+                out.write(JSON_TEST.getBytes());
             }
         });
 
@@ -260,8 +294,9 @@ public class TestJSONToAttributes {
         assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.PRESERVE_TYPE));
         assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.JSON_ATTRIBUTE_NAME));
         assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.FLATTEN_JSON));
+        assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.FLATTEN_JSON_ARRAYS));
         assertTrue(supportedPropertyDescriptors.contains(JSONToAttributes.FLATTEN_JSON_SEPARATOR));
-        assertEquals(5, supportedPropertyDescriptors.size());
+        assertEquals(6, supportedPropertyDescriptors.size());
     }
 
     @Test
@@ -403,7 +438,7 @@ public class TestJSONToAttributes {
 
     @Test
     public void definedJsonAttributeNameAndNoAttributeDefinedShouldFail() throws Exception {
-        testRunner.setProperty(JSONToAttributes.JSON_ATTRIBUTE_NAME, "json.attribute");
+        testRunner.setProperty(JSONToAttributes.JSON_ATTRIBUTE_NAME, "JSON_TEST.attribute");
 
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
         FlowFile flowFile = session.create();
@@ -420,11 +455,11 @@ public class TestJSONToAttributes {
 
     @Test
     public void definedJsonAttributeNameAndEmptyAttributeValueShouldRouteToNoContent() throws Exception {
-        testRunner.setProperty(JSONToAttributes.JSON_ATTRIBUTE_NAME, "json.attribute");
+        testRunner.setProperty(JSONToAttributes.JSON_ATTRIBUTE_NAME, "JSON_TEST.attribute");
 
         ProcessSession session = testRunner.getProcessSessionFactory().createSession();
         FlowFile flowFile = session.create();
-        flowFile = session.putAttribute(flowFile, "json.attribute", "");
+        flowFile = session.putAttribute(flowFile, "JSON_TEST.attribute", "");
 
         testRunner.enqueue(flowFile);
         testRunner.run();
