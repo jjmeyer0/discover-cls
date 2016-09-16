@@ -64,7 +64,8 @@ import java.util.concurrent.atomic.AtomicReference;
 @SupportsBatching
 @InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
 @Tags({"attributes", "routing", "route", "Attribute Expression Language", "regexp", "regex", "Regular Expression", "Expression Language"})
-@CapabilityDescription("This processor will route flow files and filter attributes based on a few defined properties. It uses regular expressions to match against the attributes.")
+@CapabilityDescription("This processor will route flow files and filter attributes based on a few defined properties. It uses regular expressions to match against the attributes. If the expression " +
+        "matches multiple attributes then the flow file will be cloned for each attribute matched by that regular expression.")
 @WritesAttributes({
         @WritesAttribute(attribute = "RouteAndSplitOnAttribute.Matched.Route", description = "The dynamic attribute that may be a relationship name."),
         @WritesAttribute(attribute = "RouteAndSplitOnAttribute.Matched.Attribute", description = "The attribute matched and routed on."),

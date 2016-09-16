@@ -25,7 +25,7 @@
 <h2>Usage Example</h2>
 <p>
     This processor routes a FlowFile based on its flow file attributes by using regular expressions. There are three routing strategies in this processor: Route to Property Name, Route to 'matched'
-    if all match, and Route to 'matched' if any matches. For the latter two only have two relationships 'matched' and 'unmatched.' The first, 'Route to Property Name' can have multiple user defined
+    if all match, and Route to 'matched' if any matches. The latter two options only have two relationships 'matched' and 'unmatched.' The first, 'Route to Property Name' can have multiple user defined
     relationships. These relationships are determined by the properties the user of this processor creates. This processor can potentially produce multiple flow files. For example, if a user
     defines a custom property that uses a regular expression, for each attribute matched this processor will clone the flow file. If none of the attributes are matched then the flow file will
     be routed to 'unmatched' relationship.

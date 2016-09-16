@@ -52,9 +52,9 @@ import java.util.regex.Pattern;
 
 @Tags({"json", "attributes", "flowfile"})
 @InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
-@CapabilityDescription("This processor will take a JSON string from either a define attribute or the flow file's content. It will convert each of the top level keys to attributes flow file " +
-        "attributes. This processor will read the JSON from the attribute defined in property descriptor named 'JSON Attribute Name.' If this is not defined then the content will be read. " +
-        "Be aware if if 'JSON Attribute Name' has a value then the content of the flow file will not be looked at. If 'Preserverve JSON Type' is true then each attribute value created will " +
+@CapabilityDescription("This processor will take a JSON string from either a defined attribute or the flow file's content. It will convert each of the top level keys to attributes " +
+        "This processor will read the JSON from the attribute defined in property descriptor named 'JSON Attribute Name.' If this is not defined then the content will be read. " +
+        "Be aware if 'JSON Attribute Name' has a value then the content of the flow file will not be looked at. If 'Preserve JSON Type' is true then each attribute value created will " +
         "be a valid JSON. For example, if a JSON string, '{\"key1\":\"val1\",\"key2\":0}', is converted to attributes, the following attributes and their values would be created: key1 with " +
         "value \"val1\" and key2 with value 0. Notice the quotes. This is done because each of the values generated from this processor must be valid JSON. However, this functionality is " +
         "configurable. This is the default behavior. If this is not desired then switch the property 'Preserve JSON Type' to false. This will then output string values without the outer " +
@@ -147,7 +147,8 @@ public class JSONToAttributes extends AbstractProcessor {
 
 
     private static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE, REL_NO_CONTENT)));
-    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(OVERRIDE_ATTRIBUTES, PRESERVE_TYPE, JSON_ATTRIBUTE_NAME, FLATTEN_JSON, FLATTEN_JSON_ARRAYS, FLATTEN_JSON_SEPARATOR));
+    private static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(OVERRIDE_ATTRIBUTES, PRESERVE_TYPE, JSON_ATTRIBUTE_NAME, FLATTEN_JSON,
+            FLATTEN_JSON_ARRAYS, FLATTEN_JSON_SEPARATOR));
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

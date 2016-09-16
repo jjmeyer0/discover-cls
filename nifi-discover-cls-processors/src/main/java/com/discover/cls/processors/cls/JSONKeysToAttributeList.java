@@ -47,7 +47,7 @@ import java.util.Set;
 
 @Tags({"json", "attributes", "flowfile"})
 @InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
-@CapabilityDescription("This processor will parse a JSON document and extract all first level keys from the JSON object. It will put all these attributes to 'attribute-list'.")
+@CapabilityDescription("This processor will parse a JSON document and extract all first level keys from the JSON object. It will put all these attributes to the attribute, 'attribute-list.'")
 @WritesAttributes({
         @WritesAttribute(attribute = "attribute-list", description = "This attribute will contain all first level keys separated by the define separator.")
 })

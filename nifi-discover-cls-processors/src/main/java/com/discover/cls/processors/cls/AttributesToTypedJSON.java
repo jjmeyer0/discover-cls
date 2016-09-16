@@ -27,6 +27,7 @@ import org.apache.nifi.annotation.behavior.SideEffectFree;
 import org.apache.nifi.annotation.behavior.SupportsBatching;
 import org.apache.nifi.annotation.behavior.WritesAttribute;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
+import org.apache.nifi.annotation.documentation.SeeAlso;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.flowfile.FlowFile;
@@ -57,10 +58,11 @@ import java.util.Set;
 @Tags({"json", "attributes", "flowfile"})
 @InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
 @CapabilityDescription("Generates a JSON representation of the input FlowFile Attributes. The resulting JSON " +
-        "can be written to either a new Attribute 'JSONAttributes' or written to the FlowFile as content. This processor " +
-        "will try and keep the attribute values' types. If parsing of an attribute fails, the value will automatically be stored " +
-        "as a string. The core attributes will be stored as strings as well.")
+        "can be written to either as a new attribute, 'JSONAttributes', or written to the flow file's content. This processor " +
+        "will try and keep the attribute values' types as best it can. If parsing of an attribute fails, the value will automatically be stored " +
+        "as a string. If you have an attribute with a value 200, this processor will create a json where the said attribute's value is 200, a number not a string.")
 @WritesAttribute(attribute = "JSONAttributes", description = "JSON representation of Attributes")
+@SeeAlso({AttributesToTypedJSON.class})
 public class AttributesToTypedJSON extends AbstractProcessor {
 
     static final String JSON_ATTRIBUTE_NAME = "JSONAttributes";
@@ -78,9 +80,9 @@ public class AttributesToTypedJSON extends AbstractProcessor {
             .build();
     static final PropertyDescriptor DESTINATION = new PropertyDescriptor.Builder()
             .name("Destination")
-            .description("Control if JSON value is written as a new flowfile attribute '" + JSON_ATTRIBUTE_NAME + "' " +
-                    "or written in the flowfile content. Writing to flowfile content will overwrite any " +
-                    "existing flowfile content.")
+            .description("Used to control if JSON value is written as a new flow file attribute '" + JSON_ATTRIBUTE_NAME + "' " +
+                    "or written in the flow file content. Writing to flow file content will overwrite any " +
+                    "existing flow file content.")
             .required(true)
             .allowableValues(DESTINATION_ATTRIBUTE, DESTINATION_CONTENT)
             .defaultValue(DESTINATION_ATTRIBUTE)
@@ -94,8 +96,8 @@ public class AttributesToTypedJSON extends AbstractProcessor {
             .defaultValue("true")
             .build();
     static final PropertyDescriptor NULL_VALUE_FOR_EMPTY_STRING = new PropertyDescriptor.Builder()
-            .name(("Null Value"))
-            .description("If true a non existing or empty attribute will be NULL in the resulting JSON. If false an empty " +
+            .name("Null Value")
+            .description("If true, a non-existing or empty attribute will be NULL in the resulting JSON. If false an empty " +
                     "string will be placed in the JSON")
             .required(true)
             .allowableValues("true", "false")

@@ -31,10 +31,11 @@
     value "val1" and key2 with value 0. Notice the quotes. This is done because each of the values generated from this processor must be valid JSON. However, this functionality is
     configurable. This is the default behavior. If this is not desired then switch the property 'Preserve JSON Type' to false. This will then output string values without the outer
     double quotes. Lastly, this processor has the capability of flattening the json it will parse. It will use the 'Flatten JSON Separator' property to concatenate different levels
-    of the JSON producing a flat map.
+    of the JSON producing a flat map. This processor also allows a user to configure whether or not array should be flattened. By default this is false.
 </p>
 <p>
-    Example: The goal is to take the JSON content and flatten into a single level flat map. We also want to override any attributes that may exist on the flow file (uuid will never be overwritten).
+    Example: The goal is to take the JSON content and flatten into a single level flat map (including arrays). We also want to override any attributes that may exist on the flow file
+    (uuid will never be overwritten).
 </p>
 <ul>
     <li><strong>property name</strong>: Override Attributes
@@ -55,7 +56,7 @@
     </li>
     <li><strong>property name</strong>: Flatten JSON Separator
     </li>
-    <li><strong>property value</strong>: .
+    <li><strong>property value</strong>: ~
     </li>
 </ul>
 <p>
@@ -96,18 +97,18 @@
 
 <pre>
 <code>
-Port.@alias, defaultHttp
-Port.Enabled, true
-Port.Number, 10092
-Port.Protocol, http
-Port.KeepAliveTimeout, 20000
-Port.ThreadPool.@enabled, false
-Port.ThreadPool.Max, 150
-Port.ThreadPool.ThreadPriority, 5
-Port.ExtendedProperties.Property[0].@name, connectionTimeout
-Port.ExtendedProperties.Property[0].$, 20000
-Port.ExtendedProperties.Property[1].@name, connectionTimeout
-Port.ExtendedProperties.Property[1].$, 20000
+Port~@alias, defaultHttp
+Port~Enabled, true
+Port~Number, 10092
+Port~Protocol, http
+Port~KeepAliveTimeout, 20000
+Port~ThreadPool~@enabled, false
+Port~ThreadPool~Max, 150
+Port~ThreadPool~ThreadPriority, 5
+Port~ExtendedProperties~Property[0]~@name, connectionTimeout
+Port~ExtendedProperties~Property[0]~$, 20000
+Port~ExtendedProperties~Property[1]~@name, connectionTimeout
+Port~ExtendedProperties~Property[1]~$, 20000
 </code>
 </pre>
 </p>
