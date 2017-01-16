@@ -18,9 +18,12 @@ package com.discover.cls.processors.cls;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.nifi.annotation.behavior.EventDriven;
 import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.behavior.ReadsAttribute;
 import org.apache.nifi.annotation.behavior.ReadsAttributes;
+import org.apache.nifi.annotation.behavior.SideEffectFree;
+import org.apache.nifi.annotation.behavior.SupportsBatching;
 import org.apache.nifi.annotation.behavior.WritesAttribute;
 import org.apache.nifi.annotation.behavior.WritesAttributes;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
@@ -45,6 +48,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@EventDriven
+@SideEffectFree
+@SupportsBatching
 @Tags({"json", "attributes", "flowfile"})
 @InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
 @CapabilityDescription("This processor will parse a JSON document and extract all first level keys from the JSON object. It will put all these attributes to the attribute, 'attribute-list.'")
